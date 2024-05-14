@@ -9,6 +9,7 @@ const cors = require("cors");
 // Routes
 const indexRoutes = require("./routes/index");
 const userRoute = require("./routes/userRoute");
+const organizationRoute = require("./routes/organizationRoute");
 
 // Middleware
 app.use(cors());
@@ -22,6 +23,9 @@ app.use(express.static(path.join(__dirname, "public")));
 // Routes
 app.use("/walid", indexRoutes);
 app.use("/user", userRoute);
+app.use("/organization", organizationRoute);
+
+// Start the server
 
 const port = process.env.PORT || 3000; // Use environment variable or default port
 
