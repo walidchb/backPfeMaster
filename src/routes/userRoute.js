@@ -3,42 +3,33 @@ const router = express.Router();
 const User = require("../models/user");
 const admin = require("firebase-admin");
 
-// Check if the request contains a Firebase ID token
-const verifyFirebaseUser = async (req, res, next) => {
-  // Check if the request contains a Firebase ID token
-  const idToken = req.headers.authorization;
-
-  if (!idToken) {
-    return res
-      .status(401)
-      .json({ message: "Unauthorized: No ID token provided" });
-  }
-
+const authenticate = async (req, res, next) => {
+  const token = req.headers.authorization.split("Bearer ")[1];
   try {
-    // Verify the Firebase ID token
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-
-    // Attach the decoded user ID to the request object
-    req.user = {
-      id: decodedToken.uid,
-    };
-
-    // Proceed to the next middleware or route handler
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    req.user = decodedToken;
     next();
   } catch (error) {
-    // If verification fails, return an error response
-    return res.status(403).json({ message: "Forbidden: Invalid ID token" });
+    res.status(401).json({ message: "Unauthorized" });
   }
 };
 
-router.get("/", (req, res) => {
+router.get("/", authenticate, (req, res) => {
   res.json({ message: "Welcome to my users routes!" });
 });
 
 // Get current user (`/me`)
-router.get("/me", verifyFirebaseUser, async (req, res) => {
+router.get("/me", async (req, res) => {
+  // const { email } = req.body; // Expect an array of attribute-value pairs
+  console.log(req.query);
   try {
-    const currentUser = await User.findById(req.user.id); // Replace 'req.user.id' with your Firebase user ID extraction logic
+    const { email } = req.query;
+    console.log(email);
+
+    if (!email) {
+      return res.status(400).json({ message: "Email is required" });
+    }
+    const currentUser = await User.findOne({ email }); // Replace 'req.user.id' with your Firebase user ID extraction logic
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
     }

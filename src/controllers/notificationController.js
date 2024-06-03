@@ -3,15 +3,28 @@ const mongoose = require("mongoose");
 
 // Get Notifications for a specific user
 const getNotifications = async (req, res) => {
-  const { recipientId } = req.query; // Assuming user ID is in the URL parameter
-  console.log(req.query.recipientId);
+  const { recipient, organization } = req.body; // Assuming user ID is in the URL parameter
+  console.log("recipientId");
+
+  console.log(req.body.recipient);
+  console.log("organizationId");
+
+  console.log(req.body.organization);
+
   // Validate user ID format (optional)
-  if (!mongoose.Types.ObjectId.isValid(recipientId)) {
+  if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
+  } else if (!mongoose.Types.ObjectId.isValid(organization)) {
+    return res.status(400).json({ message: "Invalid organization ID" });
   }
 
   try {
-    const notifications = await Notification.find({ recipientId: recipientId });
+    const notifications = await Notification.find({
+      recipient: recipient,
+      organization: organization,
+    })
+      .populate("recipient") // Populates recipient details
+      .populate("organization"); // Populates organization details;
     res.json(notifications);
   } catch (err) {
     console.error(err); // Log the error for debugging
@@ -21,21 +34,22 @@ const getNotifications = async (req, res) => {
 
 // Create a Notification
 const createNotification = async (req, res) => {
-  const { recipientId, type, content } = req.body; // Destructure required fields
+  const { recipient, type, content, organization } = req.body; // Destructure required fields
 
   // Validate required fields
-  if (!recipientId || !content) {
+  if (!recipient || !content) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
   // Validate user ID format (optional)
-  if (!mongoose.Types.ObjectId.isValid(recipientId)) {
+  if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
   }
 
   try {
     const newNotification = new Notification({
-      recipientId,
+      recipient,
+      organization,
       content,
       type,
       seen: false,
