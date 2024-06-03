@@ -11,12 +11,15 @@ const cors = require("cors");
 const indexRoutes = require("./routes/index");
 const userRoute = require("./routes/userRoute");
 const organizationRoute = require("./routes/organizationRoute");
+// <<<<<<< HEAD
 const taskRoute = require("./routes/taskRoute");
 
 const projectRoute = require("./routes/projectRoute");
 const teamRoute = require("./routes/teamRoute");
 const commentRoute = require("./routes/commentRoute");
 const notificationRoute = require("./routes/notificationRoute");
+// =======
+// >>>>>>> a28265b8e5ac52ec9a9eded7de38aeb729310987
 
 // Middleware
 app.use(cors());
