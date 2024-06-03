@@ -2,31 +2,91 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 
 const userSchema = new mongoose.Schema({
-  nom: { type: String, required: true, trim: true },
-  prenom: { type: String, required: true, trim: true },
-  phoneNumber: { type: String, unique: true },
-  gender: { type: String },
+  nom: {
+    type: String,
+    required: [true, "Nom is required"],
+    trim: true,
+  },
+  prenom: {
+    type: String,
+    required: [true, "Prenom is required"],
+    trim: true,
+  },
+  phoneNumber: {
+    type: String,
+    unique: [true, "Phone number is already in use"],
+  },
+  gender: {
+    type: String,
+    default: null,
+  },
   role: {
     type: String,
-    required: true,
-    enum: ["employee", "orgBoss", "teamBoss", "prjctBoss"],
+    required: [true, "Role is required"],
+    enum: {
+      values: ["employee", "orgBoss", "teamBoss", "prjctBoss"],
+      message:
+        "Role must be one of 'employee', 'orgBoss', 'teamBoss', or 'prjctBoss'",
+    },
   },
   email: {
     type: String,
-    required: true,
-    unique: true,
+    required: [true, "Email is required"],
+    unique: [true, "Email is already in use"],
     lowercase: true,
     trim: true,
   },
-  password: { type: String, required: true, minlength: 6 },
-  tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
-  organizations: [
-    { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
+  team: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+    },
   ],
-  businessName: { type: String, unique: true },
-  country: { type: String, unique: true },
-  province: { type: String, unique: true },
-  street: { type: String, unique: true },
+  password: {
+    type: String,
+    required: [true, "Password is required"],
+    minlength: [6, "Password must be at least 6 characters long"],
+  },
+  tasks: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Task",
+    },
+  ],
+  organizations: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Organization",
+    },
+  ],
+  businessName: {
+    type: String,
+    validate: {
+      validator: async function (value) {
+        if (this.role === "orgBoss") {
+          const count = await mongoose.models.User.countDocuments({
+            businessName: value,
+          });
+          return count === 0;
+        }
+        return true;
+      },
+      message: "Business name is already in use",
+    },
+    default: null,
+  },
+  country: {
+    type: String,
+    default: null,
+  },
+  province: {
+    type: String,
+    default: null,
+  },
+  street: {
+    type: String,
+    default: null,
+  },
 });
 
 // Hash password before saving the user
