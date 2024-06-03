@@ -1,41 +1,86 @@
 const Organization = require("../models/organization");
+const User = require("../models/user");
 const mongoose = require("mongoose");
 
-// Get Organizations based on dynamic attribute
+// Get Organizations based on dynamic attributes
 const getOrganizations = async (req, res) => {
-    console.log(req.query);
-    const { attribute, value } = req.query; // Get attribute and value from query parameters
+  const filters = req.query; // Expect multiple attribute-value pairs
 
-    if (!attribute || !value) {
-        
-      return res
-        .status(400)
-        .json({ message: "Missing attribute or value in query" });
-    }
-  
-    const filter = { [attribute]: value }; // Build dynamic filter object
-  
-    try {
-      const organizations = await Organization.find(filter);
-      res.json(organizations);
-    } catch (err) {
-      res.status(500).json({ message: "Server error" }); // Internal server error
-    }
-}
+  if (Object.keys(filters).length === 0) {
+    return res
+      .status(400)
+      .json({ message: "Missing filters in query" });
+  }
 
+  const filterObject = {};
+  for (const key in filters) {
+    filterObject[key] = filters[key];
+  }
 
-// create organization
+  try {
+    const organizations = await Organization.find(filterObject);
+    res.json(organizations);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// create organisation whith email
 const createOrganization = async (req, res) => {
-    try {
-        console.log("req.body = ", req.body)
-        const newOrganization = new Organization(req.body);
-        const savedOrganization = await newOrganization.save();
-        res.status(201).json(savedOrganization); // Created
-      } catch (err) {
-        res.status(400).json({ message: err.message }); // Bad request (validation errors)
-        
-      }
-}
+  try {
+    console.log("req.body = ", req.body);
+    
+    // Extract email from request body
+    const { email, ...organizationData } = req.body;
+    console.log(1)
+
+    // Find user by email
+    const user = await User.findOne({ email: email });
+    console.log(2)
+    if (!user) {
+      console.log(3)
+      return res.status(404).json({ error: "User not found" });
+    }
+    console.log(4)
+    console.log(user._id)
+
+    // Add boss field to organization data
+    organizationData.Boss = user._id;
+    console.log(5)
+    const newOrganization = new Organization(organizationData);
+    console.log(6)
+    // Validate organization data before saving
+    const validationErrors = newOrganization.validateSync();
+    console.log(7)
+    if (validationErrors) {
+      console.log(8)
+      const formattedErrors = Object.values(validationErrors.errors).map((error) => ({
+        message: error.message,
+        field: error.path,
+      }));
+      console.log(9)
+      return res.status(400).json({ errors: formattedErrors });
+    }
+    console.log(10)
+
+    const savedOrganization = await newOrganization.save();
+    console.log(11)
+    res.status(201).json(savedOrganization); // Created
+    console.log(12)
+  } catch (err) {
+    console.error(err); // Log the error for debugging
+
+    if (err.name === "MongoServerError" && err.code === 11000) {
+      // Handle duplicate key error (unique constraint violation)
+      return res.status(409).json({
+        error: "An organization with this information already exists.",
+      });
+    } else {
+      // Handle other errors (e.g., database connection issues)
+      return res.status(500).json({ error: err.message });
+    }
+  }
+};
 
 // delete organization
 const deleteOrganization = async (req, res) => {
@@ -68,7 +113,7 @@ const updateOrganization = async (req, res) => {
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ["Name", "Description", "CreatedBy", "Teams"];
+  const allowedUpdates = ["Name", "Boss", "Teams", "Projects"];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );
