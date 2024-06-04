@@ -18,6 +18,7 @@ const projectRoute = require("./routes/projectRoute");
 const teamRoute = require("./routes/teamRoute");
 const commentRoute = require("./routes/commentRoute");
 const notificationRoute = require("./routes/notificationRoute");
+const invitationRoute = require("./routes/invitationRoute");
 // =======
 // >>>>>>> a28265b8e5ac52ec9a9eded7de38aeb729310987
 
@@ -39,6 +40,7 @@ app.use("/team", teamRoute);
 app.use("/task", taskRoute);
 app.use("/comment", commentRoute);
 app.use("/notification", notificationRoute);
+app.use("/invitation", invitationRoute);
 
 app.use((err, req, res, next) => {
   if (err instanceof mongoose.Error.ValidationError) {

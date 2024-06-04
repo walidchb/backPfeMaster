@@ -1,9 +1,13 @@
 const mongoose = require("mongoose");
 
 const TeamSchema = new mongoose.Schema({
-  Name: String,
-  Description: String,
-  boss: {
+  Name: {
+    type: String,
+    required: [true, "Team\'s name is required"],
+    unique: [true, "Team\'s name is already in use"],
+    trim: true,
+  },
+  Boss: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
   },
@@ -11,12 +15,6 @@ const TeamSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Organization",
   },
-  Projects: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-    },
-  ],
 });
 
 const Team = mongoose.model("Team", TeamSchema);
