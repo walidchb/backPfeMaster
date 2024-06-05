@@ -134,6 +134,43 @@ const updateTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
+    // Check if new name already exists in other teams
+    if (updates.includes("Name")) {
+      const newName = req.body.Name;
+      const existingTeam = await Team.findOne({
+        Name: newName,
+        _id: { $ne: id },
+      });
+      if (existingTeam) {
+        return res.status(400).json({ message: "Team name already exists" });
+      }
+    }
+    
+
+    // Check if new boss exists
+    if (updates.includes("Boss")) {
+      const newBossId = req.body.Boss;
+      if (!mongoose.Types.ObjectId.isValid(newBossId)) {
+        return res.status(400).json({ message: "Invalid Boss ID" });
+      }
+      const newBoss = await User.findById(newBossId);
+      if (!newBoss) {
+        return res.status(404).json({ message: "New Boss not found" });
+      }
+    }
+
+    // Check if new organization exists
+    if (updates.includes("Organization")) {
+      const newOrganizationId = req.body.Organization;
+      if (!mongoose.Types.ObjectId.isValid(newOrganizationId)) {
+        return res.status(400).json({ message: "Invalid Organization ID" });
+      }
+      const newOrganization = await Organization.findById(newOrganizationId);
+      if (!newOrganization) {
+        return res.status(404).json({ message: "New Organization not found" });
+      }
+    }
+
     updates.forEach((update) => (team[update] = req.body[update]));
     await team.save();
 
@@ -141,7 +178,7 @@ const updateTeam = async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-}
+};
 
 
 module.exports ={

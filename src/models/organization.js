@@ -13,18 +13,6 @@ const OrganizationSchema = new mongoose.Schema({
     //required: [true, "Boss is required"],
     ref: "User",
   },
-  Teams: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Team",
-    },
-  ],
-  Projects: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-    },
-  ],
 });
 
 module.exports = mongoose.model("Organization", OrganizationSchema);

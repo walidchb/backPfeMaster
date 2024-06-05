@@ -1,4 +1,7 @@
 const Invitation = require("../models/invitation");
+const User = require("../models/user");
+const Organization = require("../models/organization");
+const Team = require("../models/team");
 const mongoose = require("mongoose");
 
 // Get Invitations based on dynamic attributes
@@ -36,34 +39,58 @@ const getInvitations = async (req, res) => {
 
 // Create an Invitation
 const createInvitation = async (req, res) => {
-  const { sendby, sendto, roleinvitedto } = req.body; // Destructure required fields
+  const { sendby, sendto, roleinvitedto, organisation } = req.body;
 
   // Validate required fields
-  if (!sendby || !sendto || !roleinvitedto) {
+  if (!sendby || !sendto || !roleinvitedto || !organisation) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // Validate user ID format (optional)
-  if (!mongoose.Types.ObjectId.isValid(sendby) || !mongoose.Types.ObjectId.isValid(sendto)) {
-    return res.status(400).json({ message: "Invalid User ID" });
+  // Validate ID format
+  if (
+    !mongoose.Types.ObjectId.isValid(sendby) ||
+    !mongoose.Types.ObjectId.isValid(sendto) ||
+    !mongoose.Types.ObjectId.isValid(organisation)
+  ) {
+    return res.status(400).json({ message: "Invalid ID format" });
   }
 
   try {
+    // Check if sender exists
+    const sender = await User.findById(sendby);
+    if (!sender) {
+      return res.status(404).json({ message: "Sender not found" });
+    }
+
+    // Check if recipient exists
+    const recipient = await User.findById(sendto);
+    if (!recipient) {
+      return res.status(404).json({ message: "Recipient not found" });
+    }
+
+    // Check if organization exists
+    const org = await Organization.findById(organisation);
+    if (!org) {
+      return res.status(404).json({ message: "Organization not found" });
+    }
+
     const newInvitation = new Invitation({
       sendby,
       sendto,
       roleinvitedto,
+      organisation,
       accepted: false,
     });
+
     const savedInvitation = await newInvitation.save();
-    res.status(201).json(savedInvitation); // Created
+    res.status(201).json(savedInvitation);
   } catch (err) {
-    console.error(err); // Log the error for debugging
+    console.error(err);
     res.status(400).json({ message: "Error creating invitation" });
   }
 };
 
-// Update an Invitation (assuming you want to update the `accepted` field)
+// Update an Invitation
 const updateInvitation = async (req, res) => {
   const { id } = req.params;
 
@@ -72,9 +99,8 @@ const updateInvitation = async (req, res) => {
     return res.status(400).json({ message: "Invalid Invitation ID" });
   }
 
-  const updates = Object.keys(req.body); // Get update fields from request body
-  const allowedUpdates = ["accepted"]; // Only allow updating the `accepted` field
-
+  const updates = Object.keys(req.body);
+  const allowedUpdates = ["sendby", "sendto", "roleinvitedto", "organisation", "team", "accepted"];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );
@@ -84,18 +110,64 @@ const updateInvitation = async (req, res) => {
   }
 
   try {
-    const invitation = await Invitation.findByIdAndUpdate(
-      id,
-      { accepted: true }, // Set `accepted` to true
-      { new: true } // Return the updated document
-    );
+    const invitation = await Invitation.findById(id);
 
     if (!invitation) {
       return res.status(404).json({ message: "Invitation not found" });
     }
-    res.json(invitation);
+
+    // Check if new sender exists
+    if (updates.includes("sendby")) {
+      const newSenderId = req.body.sendby;
+      if (!mongoose.Types.ObjectId.isValid(newSenderId)) {
+        return res.status(400).json({ message: "Invalid Sender ID" });
+      }
+      const sender = await User.findById(newSenderId);
+      if (!sender) {
+        return res.status(404).json({ message: "New Sender not found" });
+      }
+    }
+
+    // Check if new recipient exists
+    if (updates.includes("sendto")) {
+      const newRecipientId = req.body.sendto;
+      if (!mongoose.Types.ObjectId.isValid(newRecipientId)) {
+        return res.status(400).json({ message: "Invalid Recipient ID" });
+      }
+      const recipient = await User.findById(newRecipientId);
+      if (!recipient) {
+        return res.status(404).json({ message: "New Recipient not found" });
+      }
+    }
+
+    // Check if new organization exists
+    if (updates.includes("organization")) {
+      const newOrganizationId = req.body.organization;
+      if (!mongoose.Types.ObjectId.isValid(newOrganizationId)) {
+        return res.status(400).json({ message: "Invalid Organization ID" });
+      }
+      const org = await Organization.findById(newOrganizationId);
+      if (!org) {
+        return res.status(404).json({ message: "New Organization not found" });
+      }
+    }
+    if (updates.includes("team")) {
+      const newTeamId = req.body.team;
+      if (!mongoose.Types.ObjectId.isValid(newTeamId)) {
+        return res.status(400).json({ message: "Invalid Team ID" });
+      }
+      const team = await Team.findById(newTeamId);
+      if (!team) {
+        return res.status(404).json({ message: "New Team not found" });
+      }
+    }
+
+    updates.forEach((update) => (invitation[update] = req.body[update]));
+
+    const updatedInvitation = await invitation.save();
+    res.json(updatedInvitation);
   } catch (err) {
-    console.error(err); // Log the error for debugging
+    console.error(err);
     res.status(400).json({ message: "Error updating invitation" });
   }
 };

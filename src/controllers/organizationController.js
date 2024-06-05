@@ -25,7 +25,7 @@ const getOrganizations = async (req, res) => {
   }
 };
 
-// create organisation whith email
+// create organization whith email
 const createOrganization = async (req, res) => {
   try {
     console.log("req.body = ", req.body);
@@ -109,11 +109,11 @@ const updateOrganization = async (req, res) => {
 
   // Validate ID format
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return res.status(400).json({ message: "Invalid organization ID" });
+    return res.status(400).json({ message: "Invalid Organization ID" });
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ["Name", "Boss", "Teams", "Projects"];
+  const allowedUpdates = ["Name", "Boss"];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );
@@ -129,14 +129,47 @@ const updateOrganization = async (req, res) => {
       return res.status(404).json({ message: "Organization not found" });
     }
 
-    updates.forEach((update) => (organization[update] = req.body[update]));
-    await organization.save();
+    // Check if name is being updated
+    if (updates.includes("Name")) {
+      const newName = req.body.Name;
 
-    res.json(organization);
+      // Check if new name already exists
+      const existingOrganization = await Organization.findOne({
+        Name: newName,
+        _id: { $ne: id } // Exclude the current organisation
+      });
+      if (existingOrganization) {
+        return res.status(400).json({ message: "Organization name already exists" });
+      }
+    }
+
+    // Check if boss is being updated
+    if (updates.includes("Boss")) {
+      const newBossId = req.body.Boss;
+
+      // Validate new boss ID format
+      if (!mongoose.Types.ObjectId.isValid(newBossId)) {
+        return res.status(400).json({ message: "Invalid boss ID" });
+      }
+
+      // Check if new boss exists
+      const newBoss = await User.findById(newBossId);
+      if (!newBoss) {
+        return res.status(404).json({ message: "Boss not found" });
+      }
+    }
+
+    updates.forEach((update) => (organization[update] = req.body[update]));
+
+    const updatedOrganization = await organization.save();
+
+    res.json(updatedOrganization);
   } catch (err) {
+    console.error(err); // Log the error for debugging
     res.status(400).json({ message: err.message });
   }
-}
+};
+
 
 
 module.exports ={
