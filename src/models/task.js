@@ -1,30 +1,62 @@
 const mongoose = require("mongoose");
 
 const TaskSchema = new mongoose.Schema({
-  Title: String,
-  Description: String,
-  CreatedBy: {
+  Name: {
+    type: String,
+    required: [true, "Nom is required"],
+  },
+  Description: {
+    type: String,
+    required: [true, "Description is required"],
+  },
+  priorite: {
+    type: String,
+    required: [true, "Priorité is required"],
+    enum: {
+      values: ["A", "B", "C", "D", "E"],
+      message: "Role must be one of 'A', 'B', 'C', 'D', 'E'",
+    },
+  },
+  status: {
+    type: String,
+    required: [true, "Status is required"],
+    enum: {
+      values: ["Todo", "Inprogress", "Inreview", "Done"],
+      message: "Role must be one of 'A', 'B', 'C', 'D', 'E'",
+    },
+    default: "Todo",
+  },
+  dateDebutEstim: {
+    type: Date,
+    required: [true, "Date début is required"],
+  },
+  dateFinEstim: {
+    type: Date,
+    required: [true, "Date fin is required"],
+  },
+  dateDebutReel: {
+    type: Date,
+    default: null,
+  },
+  dateFinReel: {
+    type: Date,
+    default: null,
+  },
+  affectedto: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
+    default: null,
   },
-  assignee: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-  },
-  Project: {
+  projet: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Project",
+    required: [true, "Projet is required"],
   },
-  Team: {
+  team: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Team",
+    required: [true, "Team is required"],
   },
-  Comments: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment",
-    },
-  ],
 });
 
 const Task = mongoose.model("Task", TaskSchema);
