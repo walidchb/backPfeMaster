@@ -1,40 +1,91 @@
 const Team = require("../models/team");
+const Organization = require("../models/organization");
+const User = require("../models/user");
 const mongoose = require("mongoose");
 
 // Get Teams based on dynamic attribute
 const getTeams = async (req, res) => {
-    console.log(req.query);
-    const { attribute, value } = req.query; // Get attribute and value from query parameters
+  const filters = req.query; // Expect multiple attribute-value pairs
 
-    if (!attribute || !value) {
-        
-      return res
-        .status(400)
-        .json({ message: "Missing attribute or value in query" });
-    }
-  
-    const filter = { [attribute]: value }; // Build dynamic filter object
-  
-    try {
-      const teams = await Team.find(filter);
-      res.json(teams);
-    } catch (err) {
-      res.status(500).json({ message: "Server error" }); // Internal server error
-    }
-}
+  if (Object.keys(filters).length === 0) {
+    return res
+      .status(400)
+      .json({ message: "Missing filters in query" });
+  }
 
+  const filterObject = {};
+  for (const key in filters) {
+    filterObject[key] = filters[key];
+  }
+
+  try {
+    const teams = await Team.find(filterObject)
+      .populate("Boss", "name email") // Populate boss field with name and email
+      .populate("Organization", "Name"); // Populate organization field with name
+
+    res.json(teams);
+  } catch (err) {
+    console.error(err); // Log the error for debugging
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 // create Team
 const createTeam = async (req, res) => {
-    try {
-        const newTeam = new Team(req.body);
-        const savedTeam = await newTeam.save();
-        res.status(201).json(savedTeam); // Created
-      } catch (err) {
-        res.status(400).json({ message: err.message }); // Bad request (validation errors)
-        
-      }
-}
+  try {
+    console.log("req.body = ", req.body);
+
+    // Extract user ID and organization ID from request body
+    const { userId, organizationId, ...teamData } = req.body;
+
+    // Find user by ID
+    const user = await User.findOne({ _id: userId });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Find organization by ID
+    const organization = await Organization.findOne({ _id: organizationId });
+
+    if (!organization) {
+      return res.status(404).json({ error: "Organization not found" });
+    }
+
+    // Add boss and organization fields to team data
+    teamData.Boss = user._id;
+    teamData.Organization = organization._id;
+
+    const newTeam = new Team(teamData);
+
+    // Validate team data before saving
+    const validationErrors = newTeam.validateSync();
+
+    if (validationErrors) {
+      const formattedErrors = Object.values(validationErrors.errors).map((error) => ({
+        message: error.message,
+        field: error.path,
+      }));
+      return res.status(400).json({ errors: formattedErrors });
+    }
+
+    const savedTeam = await newTeam.save();
+
+    res.status(201).json(savedTeam); // Created
+  } catch (err) {
+    console.error(err); // Log the error for debugging
+
+    if (err.name === "MongoServerError" && err.code === 11000) {
+      // Handle duplicate key error (unique constraint violation)
+      return res.status(409).json({
+        error: "A team with this information already exists.",
+      });
+    } else {
+      // Handle other errors (e.g., database connection issues)
+      return res.status(500).json({ error: err.message });
+    }
+  }
+};
 
 // delete Team
 const deleteTeam = async (req, res) => {
@@ -67,7 +118,7 @@ const updateTeam = async (req, res) => {
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ["Name", "Description", "boss", "Organization", "Projects"];
+  const allowedUpdates = ["Name", "Boss", "Organization"];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );
@@ -83,6 +134,43 @@ const updateTeam = async (req, res) => {
       return res.status(404).json({ message: "Team not found" });
     }
 
+    // Check if new name already exists in other teams
+    if (updates.includes("Name")) {
+      const newName = req.body.Name;
+      const existingTeam = await Team.findOne({
+        Name: newName,
+        _id: { $ne: id },
+      });
+      if (existingTeam) {
+        return res.status(400).json({ message: "Team name already exists" });
+      }
+    }
+    
+
+    // Check if new boss exists
+    if (updates.includes("Boss")) {
+      const newBossId = req.body.Boss;
+      if (!mongoose.Types.ObjectId.isValid(newBossId)) {
+        return res.status(400).json({ message: "Invalid Boss ID" });
+      }
+      const newBoss = await User.findById(newBossId);
+      if (!newBoss) {
+        return res.status(404).json({ message: "New Boss not found" });
+      }
+    }
+
+    // Check if new organization exists
+    if (updates.includes("Organization")) {
+      const newOrganizationId = req.body.Organization;
+      if (!mongoose.Types.ObjectId.isValid(newOrganizationId)) {
+        return res.status(400).json({ message: "Invalid Organization ID" });
+      }
+      const newOrganization = await Organization.findById(newOrganizationId);
+      if (!newOrganization) {
+        return res.status(404).json({ message: "New Organization not found" });
+      }
+    }
+
     updates.forEach((update) => (team[update] = req.body[update]));
     await team.save();
 
@@ -90,7 +178,7 @@ const updateTeam = async (req, res) => {
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
-}
+};
 
 
 module.exports ={
