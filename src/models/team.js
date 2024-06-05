@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const TeamSchema = new mongoose.Schema({
   Name: {
@@ -16,6 +17,7 @@ const TeamSchema = new mongoose.Schema({
     ref: "Organization",
   },
 });
+TeamSchema.plugin(uniqueValidator);
 
 const Team = mongoose.model("Team", TeamSchema);
 

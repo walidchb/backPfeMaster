@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const invitationSchema = new mongoose.Schema({
   sendby: {
@@ -35,5 +36,6 @@ const invitationSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+invitationSchema.plugin(uniqueValidator);
 
 module.exports = mongoose.model("Invitation", invitationSchema);

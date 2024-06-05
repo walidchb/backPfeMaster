@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const TaskSchema = new mongoose.Schema({
   Name: {
@@ -58,6 +59,7 @@ const TaskSchema = new mongoose.Schema({
     required: [true, "Team is required"],
   },
 });
+TaskSchema.plugin(uniqueValidator);
 
 const Task = mongoose.model("Task", TaskSchema);
 

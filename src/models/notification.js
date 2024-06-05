@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const notificationSchema = new mongoose.Schema({
   recipient: {
@@ -29,5 +30,6 @@ const notificationSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
+notificationSchema.plugin(uniqueValidator);
 
 module.exports = mongoose.model("Notification", notificationSchema);

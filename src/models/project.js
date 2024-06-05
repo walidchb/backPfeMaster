@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const ProjectSchema = new mongoose.Schema({
   Name: {
@@ -50,6 +51,7 @@ const ProjectSchema = new mongoose.Schema({
     required: [true, "Teams is required"],
   },
 });
+ProjectSchema.plugin(uniqueValidator);
 
 const Project = mongoose.model("Project", ProjectSchema);
 

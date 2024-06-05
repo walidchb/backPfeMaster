@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const OrganizationSchema = new mongoose.Schema({
   Name: {
@@ -14,6 +15,7 @@ const OrganizationSchema = new mongoose.Schema({
     ref: "User",
   },
 });
+OrganizationSchema.plugin(uniqueValidator);
 
 module.exports = mongoose.model("Organization", OrganizationSchema);
 
