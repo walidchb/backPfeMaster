@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
-
+const uniqueValidator = require("mongoose-unique-validator");
 const userSchema = new mongoose.Schema({
   nom: {
     type: String,
@@ -59,22 +59,22 @@ const userSchema = new mongoose.Schema({
       ref: "Organization",
     },
   ],
-  businessName: {
-    type: String,
-    validate: {
-      validator: async function (value) {
-        if (this.role === "orgBoss") {
-          const count = await mongoose.models.User.countDocuments({
-            businessName: value,
-          });
-          return count === 0;
-        }
-        return true;
-      },
-      message: "Business name is already in use",
-    },
-    default: null,
-  },
+  // businessName: {
+  //   type: String,
+  //   validate: {
+  //     validator: async function (value) {
+  //       if (this.role === "orgBoss") {
+  //         const count = await mongoose.models.User.countDocuments({
+  //           businessName: value,
+  //         });
+  //         return count === 0;
+  //       }
+  //       return true;
+  //     },
+  //     message: "Business name is already in use",
+  //   },
+  //   default: null,
+  // },
   country: {
     type: String,
     default: null,
@@ -98,6 +98,7 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
+userSchema.plugin(uniqueValidator);
 // Virtual property for full name (optional)
 userSchema.virtual("fullName").get(function () {
   return `${this.nom} ${this.prenom}`;

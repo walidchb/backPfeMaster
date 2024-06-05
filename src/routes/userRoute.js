@@ -72,40 +72,72 @@ router.get("/users", async (req, res) => {
 router.post("/users", async (req, res) => {
   try {
     const newUser = new User(req.body);
+    const savedUser = await newUser.save();
+    res.status(201).json(savedUser); // Created
+  } catch (err) {
+    console.error(err);
 
-    // Validate user data before saving
-    const validationErrors = newUser.validateSync();
-    if (validationErrors) {
-      const formattedErrors = validationErrors.errors.map((error) => ({
+    if (err.name === "ValidationError") {
+      // Extract specific validation errors (e.g., required fields)
+      const formattedErrors = Object.values(err.errors).map((error) => ({
         message: error.message,
         field: error.path,
       }));
       return res.status(400).json({ errors: formattedErrors });
-    }
-
-    const savedUser = await newUser.save();
-    res.status(201).json(savedUser); // Created
-  } catch (err) {
-    console.log("err before");
-
-    console.log(err.code);
-    console.log(err.name);
-
-    if (err.name === "MongoServerError" && err.code === 11000) {
-      console.log("err first if");
-
-      console.log(err);
-      // Handle duplicate key error (unique constraint violation)
-      return res.status(409).json({
-        error: "A user with this information already exists.",
-      });
+    } else if (err.name === "CastError") {
+      // Handle casting errors (e.g., invalid data types)
+      return res.status(400).json({ error: "Invalid data format." });
+    } else if (err.name === "MongoServerError" && err.code === 11000) {
+      // Handle unique constraint violation (already handled)
+      return res
+        .status(409)
+        .json({ error: "A user with this information already exists." });
     } else {
-      // Handle other errors (e.g., database connection issues)
-      console.error(err); // Log the error for debugging
-      return res.status(500).json({ error: err });
+      // Handle other Mongoose errors
+      return res
+        .status(500)
+        .json({ error: "An error occurred during user creation." });
     }
   }
 });
+
+// router.post("/users", async (req, res) => {
+//   try {
+//     const newUser = new User(req.body);
+
+//     // Validate user data before saving
+//     const validationErrors = newUser.validateSync();
+//     if (validationErrors) {
+//       const formattedErrors = validationErrors.errors.map((error) => ({
+//         message: error.message,
+//         field: error.path,
+//       }));
+//       return res.status(400).json({ errors: formattedErrors });
+//     }
+
+//     const savedUser = await newUser.save();
+//     res.status(201).json(savedUser); // Created
+//   } catch (err) {
+//     console.log("err before");
+
+//     console.log(err.code);
+//     console.log(err.name);
+
+//     if (err.name === "MongoServerError" && err.code === 11000) {
+//       console.log("err first if");
+
+//       console.log(err);
+//       // Handle duplicate key error (unique constraint violation)
+//       return res.status(409).json({
+//         error: "A user with this information already exists.",
+//       });
+//     } else {
+//       // Handle other errors (e.g., database connection issues)
+//       console.error(err); // Log the error for debugging
+//       return res.status(500).json({ error: err });
+//     }
+//   }
+// });
 
 // router.post("/users", async (req, res) => {
 //   try {
