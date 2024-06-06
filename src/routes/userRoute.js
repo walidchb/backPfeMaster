@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
 const admin = require("firebase-admin");
+const mongoose = require("mongoose");
 
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization.split("Bearer ")[1];
@@ -40,7 +41,7 @@ router.get("/me", async (req, res) => {
 });
 
 // Get users based on dynamic attribute
-router.get("/users", async (req, res) => {
+router.post("/users", async (req, res) => {
   const filters = req.body; // Expect an array of attribute-value pairs
 
   if (!Array.isArray(filters) || filters.length === 0) {
@@ -170,6 +171,7 @@ router.put("/users/:id", async (req, res) => {
     "country",
     "province",
     "street",
+    "organizations"
   ]; // Allowed fields for update
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
