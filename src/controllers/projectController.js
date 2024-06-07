@@ -26,9 +26,6 @@ const getProjects = async (req, res) => {
 
   try {
     const projects = await Project.find(filterObject)
-      .populate("boss", "name email") // Populate boss field with name and email
-      .populate("teams", "Name"); // Populate teams field with team names
-
     res.json(projects);
   } catch (err) {
     console.error(err); // Log the error for debugging

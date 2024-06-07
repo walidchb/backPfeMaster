@@ -25,9 +25,9 @@ const getTasks = async (req, res) => {
 
   try {
     const tasks = await Task.find(filterObject)
-      .populate("affectedto", "name email") // Populate affectedto field with name and email
-      .populate("projet", "Name") // Populate projet field with project name
-      .populate("team", "Name"); // Populate team field with team name
+      .populate("affectedto") // Populate affectedto field with name and email
+      .populate("projet") // Populate projet field with project name
+      .populate("team"); // Populate team field with team name
 
     res.json(tasks);
   } catch (err) {

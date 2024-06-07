@@ -20,8 +20,8 @@ const getTeams = async (req, res) => {
 
   try {
     const teams = await Team.find(filterObject)
-      .populate("Boss", "name email") // Populate boss field with name and email
-      .populate("Organization", "Name"); // Populate organization field with name
+      .populate("Boss") // Populate boss field with name and email
+      .populate("Organization"); // Populate organization field with name
 
     res.json(teams);
   } catch (err) {
