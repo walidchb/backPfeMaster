@@ -25,9 +25,9 @@ const getTasks = async (req, res) => {
 
   try {
     const tasks = await Task.find(filterObject)
-      .populate("affectedto", "name email") // Populate affectedto field with name and email
-      .populate("projet", "Name") // Populate projet field with project name
-      .populate("team", "Name"); // Populate team field with team name
+      .populate("affectedto") // Populate affectedto field with name and email
+      .populate("projet") // Populate projet field with project name
+      .populate("team"); // Populate team field with team name
 
     res.json(tasks);
   } catch (err) {
@@ -75,10 +75,12 @@ const createTask = async (req, res) => {
     const validationErrors = newTask.validateSync();
 
     if (validationErrors) {
-      const formattedErrors = Object.values(validationErrors.errors).map((error) => ({
-        message: error.message,
-        field: error.path,
-      }));
+      const formattedErrors = Object.values(validationErrors.errors).map(
+        (error) => ({
+          message: error.message,
+          field: error.path,
+        })
+      );
       return res.status(400).json({ errors: formattedErrors });
     }
 
@@ -164,7 +166,10 @@ const updateTask = async (req, res) => {
       const newAffectedtoId = req.body.affectedto;
 
       // Validate new affectedto ID format
-      if (newAffectedtoId && !mongoose.Types.ObjectId.isValid(newAffectedtoId)) {
+      if (
+        newAffectedtoId &&
+        !mongoose.Types.ObjectId.isValid(newAffectedtoId)
+      ) {
         return res.status(400).json({ message: "Invalid affectedto ID" });
       }
 
@@ -172,7 +177,9 @@ const updateTask = async (req, res) => {
       if (newAffectedtoId) {
         const newAffectedto = await User.findById(newAffectedtoId);
         if (!newAffectedto) {
-          return res.status(404).json({ message: "New affectedto user not found" });
+          return res
+            .status(404)
+            .json({ message: "New affectedto user not found" });
         }
       }
     }

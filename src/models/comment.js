@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const commentSchema = new mongoose.Schema({
   content: {
@@ -10,25 +11,16 @@ const commentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now,
-  },
   taskId: {
-    // Optional - Include author information if needed
     type: mongoose.Schema.Types.ObjectId,
-    ref: "task", // Reference to the User model (if applicable)
+    ref: "Task",
   },
   authorId: {
-    // Optional - Include author information if needed
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user", // Reference to the User model (if applicable)
+    ref: "User",
   },
 });
 
-commentSchema.pre("save", function (next) {
-  this.updatedAt = Date.now();
-  next();
-});
+commentSchema.plugin(uniqueValidator);
 
 module.exports = mongoose.model("Comment", commentSchema);

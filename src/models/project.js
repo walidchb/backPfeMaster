@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const ProjectSchema = new mongoose.Schema({
   Name: {
@@ -29,6 +30,11 @@ const ProjectSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  organization: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: [true, "Organization is required"],
+  },
   boss: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -49,7 +55,14 @@ const ProjectSchema = new mongoose.Schema({
     },
     required: [true, "Teams is required"],
   },
+  tasks: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Task",
+    },
+  ],
 });
+ProjectSchema.plugin(uniqueValidator);
 
 const Project = mongoose.model("Project", ProjectSchema);
 
