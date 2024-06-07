@@ -8,9 +8,7 @@ const getTeams = async (req, res) => {
   const filters = req.query; // Expect multiple attribute-value pairs
 
   if (Object.keys(filters).length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Missing filters in query" });
+    return res.status(400).json({ message: "Missing filters in query" });
   }
 
   const filterObject = {};
@@ -20,8 +18,8 @@ const getTeams = async (req, res) => {
 
   try {
     const teams = await Team.find(filterObject)
-      .populate("Boss", "name email") // Populate boss field with name and email
-      .populate("Organization", "Name"); // Populate organization field with name
+      .populate("Boss") // Populate boss field with name and email
+      .populate("Organization"); // Populate organization field with name
 
     res.json(teams);
   } catch (err) {
@@ -36,36 +34,42 @@ const createTeam = async (req, res) => {
     console.log("req.body = ", req.body);
 
     // Extract user ID and organization ID from request body
-    const { userId, organizationId, ...teamData } = req.body;
-
+    const { Name, BossId, OrganizationId } = req.body;
+    let bossAtr = null;
     // Find user by ID
-    const user = await User.findOne({ _id: userId });
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    if (BossId) {
+      const user = await User.findOne({ _id: BossId });
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      bossAtr = user._id;
     }
 
     // Find organization by ID
-    const organization = await Organization.findOne({ _id: organizationId });
+    const organization = await Organization.findOne({ _id: OrganizationId });
 
     if (!organization) {
       return res.status(404).json({ error: "Organization not found" });
     }
 
     // Add boss and organization fields to team data
-    teamData.Boss = user._id;
-    teamData.Organization = organization._id;
 
-    const newTeam = new Team(teamData);
+    const newTeam = new Team({
+      Boss: bossAtr,
+      Organization: organization._id,
+      Name,
+    });
 
     // Validate team data before saving
     const validationErrors = newTeam.validateSync();
 
     if (validationErrors) {
-      const formattedErrors = Object.values(validationErrors.errors).map((error) => ({
-        message: error.message,
-        field: error.path,
-      }));
+      const formattedErrors = Object.values(validationErrors.errors).map(
+        (error) => ({
+          message: error.message,
+          field: error.path,
+        })
+      );
       return res.status(400).json({ errors: formattedErrors });
     }
 
@@ -106,7 +110,7 @@ const deleteTeam = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" }); // Internal server error
   }
-}
+};
 
 // update Team
 const updateTeam = async (req, res) => {
@@ -145,7 +149,6 @@ const updateTeam = async (req, res) => {
         return res.status(400).json({ message: "Team name already exists" });
       }
     }
-    
 
     // Check if new boss exists
     if (updates.includes("Boss")) {
@@ -180,10 +183,9 @@ const updateTeam = async (req, res) => {
   }
 };
 
-
-module.exports ={
-    createTeam,
-    getTeams,
-    deleteTeam,
-    updateTeam
-}
+module.exports = {
+  createTeam,
+  getTeams,
+  deleteTeam,
+  updateTeam,
+};

@@ -7,9 +7,7 @@ const getOrganizations = async (req, res) => {
   const filters = req.query; // Expect multiple attribute-value pairs
 
   if (Object.keys(filters).length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Missing filters in query" });
+    return res.status(400).json({ message: "Missing filters in query" });
   }
 
   const filterObject = {};
@@ -18,7 +16,9 @@ const getOrganizations = async (req, res) => {
   }
 
   try {
-    const organizations = await Organization.find(filterObject);
+    const organizations = await Organization.find(filterObject).populate(
+      "Boss"
+    );
     res.json(organizations);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -29,44 +29,46 @@ const getOrganizations = async (req, res) => {
 const createOrganization = async (req, res) => {
   try {
     console.log("req.body = ", req.body);
-    
+
     // Extract email from request body
     const { email, ...organizationData } = req.body;
-    console.log(1)
+    console.log(1);
 
     // Find user by email
     const user = await User.findOne({ email: email });
-    console.log(2)
+    console.log(2);
     if (!user) {
-      console.log(3)
+      console.log(3);
       return res.status(404).json({ error: "User not found" });
     }
-    console.log(4)
-    console.log(user._id)
+    console.log(4);
+    console.log(user._id);
 
     // Add boss field to organization data
     organizationData.Boss = user._id;
-    console.log(5)
+    console.log(5);
     const newOrganization = new Organization(organizationData);
-    console.log(6)
+    console.log(6);
     // Validate organization data before saving
     const validationErrors = newOrganization.validateSync();
-    console.log(7)
+    console.log(7);
     if (validationErrors) {
-      console.log(8)
-      const formattedErrors = Object.values(validationErrors.errors).map((error) => ({
-        message: error.message,
-        field: error.path,
-      }));
-      console.log(9)
+      console.log(8);
+      const formattedErrors = Object.values(validationErrors.errors).map(
+        (error) => ({
+          message: error.message,
+          field: error.path,
+        })
+      );
+      console.log(9);
       return res.status(400).json({ errors: formattedErrors });
     }
-    console.log(10)
+    console.log(10);
 
     const savedOrganization = await newOrganization.save();
-    console.log(11)
+    console.log(11);
     res.status(201).json(savedOrganization); // Created
-    console.log(12)
+    console.log(12);
   } catch (err) {
     console.error(err); // Log the error for debugging
 
@@ -101,7 +103,7 @@ const deleteOrganization = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: "Server error" }); // Internal server error
   }
-}
+};
 
 // update organization
 const updateOrganization = async (req, res) => {
@@ -136,10 +138,12 @@ const updateOrganization = async (req, res) => {
       // Check if new name already exists
       const existingOrganization = await Organization.findOne({
         Name: newName,
-        _id: { $ne: id } // Exclude the current organisation
+        _id: { $ne: id }, // Exclude the current organisation
       });
       if (existingOrganization) {
-        return res.status(400).json({ message: "Organization name already exists" });
+        return res
+          .status(400)
+          .json({ message: "Organization name already exists" });
       }
     }
 
@@ -170,11 +174,9 @@ const updateOrganization = async (req, res) => {
   }
 };
 
-
-
-module.exports ={
-    createOrganization,
-    getOrganizations,
-    deleteOrganization,
-    updateOrganization
-}
+module.exports = {
+  createOrganization,
+  getOrganizations,
+  deleteOrganization,
+  updateOrganization,
+};

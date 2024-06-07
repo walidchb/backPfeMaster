@@ -7,11 +7,9 @@ const mongoose = require("mongoose");
 // Get Invitations based on dynamic attributes
 const getInvitations = async (req, res) => {
   const filters = req.query; // Expect multiple attribute-value pairs
-
+  console.log(filters);
   if (Object.keys(filters).length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Missing filters in query" });
+    return res.status(400).json({ message: "Missing filters in query" });
   }
 
   const filterObject = {};
@@ -27,9 +25,10 @@ const getInvitations = async (req, res) => {
 
   try {
     const invitations = await Invitation.find(filterObject)
-      .populate("sendby", "name email") // Populate sendby field with name and email
-      .populate("sendto", "name email"); // Populate sendto field with name and email
-
+      .populate("sendby") // Populate sendby field with name and email
+      .populate("sendto") // Populate sendto field with name and email
+      .populate("team") // Populate sendby field with name and email
+      .populate("organisation");
     res.json(invitations);
   } catch (err) {
     console.error(err); // Log the error for debugging
@@ -39,8 +38,9 @@ const getInvitations = async (req, res) => {
 
 // Create an Invitation
 const createInvitation = async (req, res) => {
-  const { sendby, sendto, roleinvitedto, organisation } = req.body;
+  const { sendby, sendto, roleinvitedto, team, organisation } = req.body;
 
+  console.log(req.body);
   // Validate required fields
   if (!sendby || !sendto || !roleinvitedto || !organisation) {
     return res.status(400).json({ message: "Missing required fields" });
@@ -50,7 +50,8 @@ const createInvitation = async (req, res) => {
   if (
     !mongoose.Types.ObjectId.isValid(sendby) ||
     !mongoose.Types.ObjectId.isValid(sendto) ||
-    !mongoose.Types.ObjectId.isValid(organisation)
+    !mongoose.Types.ObjectId.isValid(organisation) ||
+    !mongoose.Types.ObjectId.isValid(team)
   ) {
     return res.status(400).json({ message: "Invalid ID format" });
   }
@@ -78,6 +79,7 @@ const createInvitation = async (req, res) => {
       sendby,
       sendto,
       roleinvitedto,
+      team,
       organisation,
       accepted: false,
     });
@@ -100,7 +102,14 @@ const updateInvitation = async (req, res) => {
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ["sendby", "sendto", "roleinvitedto", "organisation", "team", "accepted"];
+  const allowedUpdates = [
+    "sendby",
+    "sendto",
+    "roleinvitedto",
+    "organisation",
+    "team",
+    "accepted",
+  ];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );
@@ -182,9 +191,7 @@ const deleteInvitation = async (req, res) => {
   }
 
   try {
-    const deletedInvitation = await Invitation.findByIdAndDelete(
-      id
-    );
+    const deletedInvitation = await Invitation.findByIdAndDelete(id);
 
     if (!deletedInvitation) {
       return res.status(404).json({ message: "Invitation not found" });

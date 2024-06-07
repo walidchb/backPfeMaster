@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
 const admin = require("firebase-admin");
+const mongoose = require("mongoose");
 
 const authenticate = async (req, res, next) => {
   const token = req.headers.authorization.split("Bearer ")[1];
@@ -29,7 +30,9 @@ router.get("/me", async (req, res) => {
     if (!email) {
       return res.status(400).json({ message: "Email is required" });
     }
-    const currentUser = await User.findOne({ email }); // Replace 'req.user.id' with your Firebase user ID extraction logic
+    const currentUser = await User.findOne({ email })
+      .populate("organizations") // Populate sendby field with name and email
+      .populate("team"); // Replace 'req.user.id' with your Firebase user ID extraction logic
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -41,29 +44,57 @@ router.get("/me", async (req, res) => {
 
 // Get users based on dynamic attribute
 router.get("/users", async (req, res) => {
-  const filters = req.body; // Expect an array of attribute-value pairs
+  const filters = req.query; // Expect multiple attribute-value pairs
 
-  if (!Array.isArray(filters) || filters.length === 0) {
-    return res
-      .status(400)
-      .json({ message: "Invalid or missing filters in body" });
-  }
+  // if (Object.keys(filters).length === 0) {
+  //   return res.status(400).json({ message: "Missing filters in query" });
+  // }
 
   const filterObject = {};
-  for (const { attribute, value } of filters) {
-    if (!attribute || !value) {
-      return res
-        .status(400)
-        .json({ message: "Each filter must have an attribute and a value" });
-    }
-    filterObject[attribute] = value;
+  for (const key in filters) {
+    filterObject[key] = filters[key];
   }
 
   try {
-    const users = await User.find(filterObject);
+    const users = await User.find(
+      Object.keys(filters).length === 0 ? {} : filterObject
+    );
+
     res.json(users);
   } catch (err) {
+    console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+//check-user-exists
+router.post("/check-user-exists", async (req, res) => {
+  const { email, phoneNumber } = req.body;
+
+  // Input validation (optional)
+  if (!email && !phoneNumber) {
+    return res.status(400).json({ message: "Missing email or phone number" });
+  }
+
+  try {
+    // Efficiently combine email and phone number checks using $or and $not operators
+    let user = await User.findOne({ email });
+
+    // user =
+
+    console.log(user);
+    if (!user) {
+      user = await User.findOne({ phoneNumber });
+    }
+
+    if (user) {
+      res.json({ exists: true });
+    } else {
+      res.json({ exists: false });
+    }
+  } catch (error) {
+    console.error("Error checking user existence:", error); // Log specific error details
+    res.status(500).json({ message: "Internal server error" }); // Generic error message for user
   }
 });
 
@@ -101,64 +132,16 @@ router.post("/users", async (req, res) => {
   }
 });
 
-// router.post("/users", async (req, res) => {
-//   try {
-//     const newUser = new User(req.body);
-
-//     // Validate user data before saving
-//     const validationErrors = newUser.validateSync();
-//     if (validationErrors) {
-//       const formattedErrors = validationErrors.errors.map((error) => ({
-//         message: error.message,
-//         field: error.path,
-//       }));
-//       return res.status(400).json({ errors: formattedErrors });
-//     }
-
-//     const savedUser = await newUser.save();
-//     res.status(201).json(savedUser); // Created
-//   } catch (err) {
-//     console.log("err before");
-
-//     console.log(err.code);
-//     console.log(err.name);
-
-//     if (err.name === "MongoServerError" && err.code === 11000) {
-//       console.log("err first if");
-
-//       console.log(err);
-//       // Handle duplicate key error (unique constraint violation)
-//       return res.status(409).json({
-//         error: "A user with this information already exists.",
-//       });
-//     } else {
-//       // Handle other errors (e.g., database connection issues)
-//       console.error(err); // Log the error for debugging
-//       return res.status(500).json({ error: err });
-//     }
-//   }
-// });
-
-// router.post("/users", async (req, res) => {
-//   try {
-//     const newUser = new User(req.body);
-//     const savedUser = await newUser.save();
-//     res.status(201).json(savedUser); // Created
-//   } catch (err) {
-//     res.status(400).json(err); // Bad request (validation errors)
-//   }
-// });
-
 // update user
-router.put("/users/:id", async (req, res) => {
-  const { id } = req.params;
+router.patch("/users", async (req, res) => {
+  const { id } = req.query;
 
-  // Validate ID format (optional, using Mongoose built-in validation)
+  // Validate ID format
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ message: "Invalid user ID" });
   }
 
-  const updates = Object.keys(req.body); // Get properties to update
+  const updates = Object.keys(req.body);
   const allowedUpdates = [
     "nom",
     "prenom",
@@ -171,8 +154,9 @@ router.put("/users/:id", async (req, res) => {
     "province",
     "street",
   ]; // Allowed fields for update
-  const isValidUpdate = updates.every((update) =>
-    allowedUpdates.includes(update)
+  const arrayUpdates = ["team", "organizations"];
+  const isValidUpdate = updates.every(
+    (update) => allowedUpdates.includes(update) || arrayUpdates.includes(update)
   );
 
   if (!isValidUpdate) {
@@ -180,17 +164,40 @@ router.put("/users/:id", async (req, res) => {
   }
 
   try {
-    const user = await User.findByIdAndUpdate(id, req.body, {
+    // Separate regular updates and array updates
+    const regularUpdates = {};
+    const arrayUpdatesData = {};
+
+    updates.forEach((update) => {
+      if (arrayUpdates.includes(update)) {
+        arrayUpdatesData[update] = req.body[update];
+      } else {
+        regularUpdates[update] = req.body[update];
+      }
+    });
+
+    // Update regular fields
+    const user = await User.findByIdAndUpdate(id, regularUpdates, {
       new: true,
       runValidators: true,
-    }); // Find by ID, update, return new doc, run validation
+    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // Push new values to array fields
+    for (let key in arrayUpdatesData) {
+      if (arrayUpdatesData.hasOwnProperty(key)) {
+        user[key].push(arrayUpdatesData[key]);
+      }
+    }
+
+    await user.save();
+
     res.json(user);
   } catch (err) {
-    res.status(400).json({ message: err.message }); // Bad request (validation errors)
+    res.status(400).json({ message: err.message });
   }
 });
 
