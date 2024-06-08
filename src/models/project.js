@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const uniqueValidator = require("mongoose-unique-validator");
+// const uniqueValidator = require("mongoose-unique-validator");
 
 const ProjectSchema = new mongoose.Schema({
   Name: {
@@ -62,7 +62,7 @@ const ProjectSchema = new mongoose.Schema({
     },
   ],
 });
-ProjectSchema.plugin(uniqueValidator);
+// ProjectSchema.plugin(uniqueValidator);
 
 const Project = mongoose.model("Project", ProjectSchema);
 

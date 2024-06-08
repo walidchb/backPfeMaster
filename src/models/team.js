@@ -3,8 +3,7 @@ const mongoose = require("mongoose");
 const TeamSchema = new mongoose.Schema({
   Name: {
     type: String,
-    required: [true, "Team\'s name is required"],
-    unique: [true, "Team\'s name is already in use"],
+    required: [true, "Team's name is required"],
     trim: true,
   },
   Boss: {

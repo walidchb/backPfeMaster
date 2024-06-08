@@ -34,16 +34,16 @@ const createTeam = async (req, res) => {
     console.log("req.body = ", req.body);
 
     // Extract user ID and organization ID from request body
-    const { Name, BossId, OrganizationId } = req.body;
-    let bossAtr = null;
-    // Find user by ID
-    if (BossId) {
-      const user = await User.findOne({ _id: BossId });
-      if (!user) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      bossAtr = user._id;
-    }
+    const { Name, OrganizationId } = req.body;
+    // let bossAtr = null;
+    // // Find user by ID
+    // if (BossId) {
+    //   const user = await User.findOne({ _id: BossId });
+    //   if (!user) {
+    //     return res.status(404).json({ error: "User not found" });
+    //   }
+    //   bossAtr = user._id;
+    // }
 
     // Find organization by ID
     const organization = await Organization.findOne({ _id: OrganizationId });
@@ -55,7 +55,7 @@ const createTeam = async (req, res) => {
     // Add boss and organization fields to team data
 
     const newTeam = new Team({
-      Boss: bossAtr,
+      // Boss: bossAtr,
       Organization: organization._id,
       Name,
     });

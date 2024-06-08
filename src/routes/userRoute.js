@@ -1,23 +1,36 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
+// const Project = require("../models/Project");
+const Project = require("../models/project");
 const admin = require("firebase-admin");
 const mongoose = require("mongoose");
 
-const authenticate = async (req, res, next) => {
-  const token = req.headers.authorization.split("Bearer ")[1];
+async function getUserProjects(userId) {
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (error) {
-    res.status(401).json({ message: "Unauthorized" });
-  }
-};
+    console.log(1);
+    const user = await User.findById(userId).populate("team");
 
-router.get("/", authenticate, (req, res) => {
-  res.json({ message: "Welcome to my users routes!" });
-});
+    if (!user) {
+      throw new Error("User not found");
+    }
+    console.log(2);
+
+    const userTeams = user.team.map((t) => t._id);
+    console.log(3);
+
+    const projects = await Project.find({
+      teams: { $in: userTeams },
+    })
+      .populate("teams") // Optionally populate team details
+      .populate("boss"); // Optionally populate project boss details
+
+    return projects;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
 
 // Get current user (`/me`)
 router.get("/me", async (req, res) => {
@@ -64,6 +77,20 @@ router.get("/users", async (req, res) => {
   } catch (err) {
     console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.get("/userProjects", async (req, res) => {
+  const { userId } = req.query;
+  console.log("userId");
+
+  // console.log(userId.userId);
+
+  try {
+    const projects = await getUserProjects(userId);
+    res.status(200).json(projects);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
