@@ -24,8 +24,8 @@ const getComments = async (req, res) => {
 
   try {
     const comments = await Comment.find(filterObject)
-      .populate("authorId", "name email") // Populate authorId field with name and email
-      .populate("taskId", "name"); // Populate taskId field with task name
+      .populate("authorId") // Populate authorId field with name and email
+      .populate("taskId"); // Populate taskId field with task name
 
     res.json(comments);
   } catch (err) {

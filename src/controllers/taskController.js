@@ -4,9 +4,9 @@ const Project = require("../models/project");
 const Team = require("../models/team");
 const mongoose = require("mongoose");
 
-// Get tasks based on dynamic attribute
+// Get tasks based on dynamic attributes
 const getTasks = async (req, res) => {
-  const filters = req.query; // Expect multiple attribute-value pairs
+  const filters = req.query;
 
   if (Object.keys(filters).length === 0) {
     return res.status(400).json({ message: "Missing filters in query" });
@@ -14,24 +14,31 @@ const getTasks = async (req, res) => {
 
   const filterObject = {};
   for (const key in filters) {
-    // Validate ObjectId fields
     if (key === "affectedto" || key === "projet" || key === "team") {
-      if (!mongoose.Types.ObjectId.isValid(filters[key])) {
-        return res.status(400).json({ message: "Invalid ObjectId" });
+      // Check if it's an array (multiple IDs) or a single ID
+      const ids = Array.isArray(filters[key]) ? filters[key] : [filters[key]];
+      
+      // Validate each ID
+      if (!ids.every(id => mongoose.Types.ObjectId.isValid(id))) {
+        return res.status(400).json({ message: `Invalid ObjectId in ${key}` });
       }
+      
+      // Use $in operator for arrays
+      filterObject[key] = { $in: ids };
+    } else {
+      filterObject[key] = filters[key];
     }
-    filterObject[key] = filters[key];
   }
 
   try {
     const tasks = await Task.find(filterObject)
-      .populate("affectedto") // Populate affectedto field with name and email
-      .populate("projet") // Populate projet field with project name
-      .populate("team"); // Populate team field with team name
+      .populate("affectedto")
+      .populate("projet")
+      .populate("team");
 
     res.json(tasks);
   } catch (err) {
-    console.error(err); // Log the error for debugging
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
