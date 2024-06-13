@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
-// const Project = require("../models/Project");
-const Project = require("../models/project");
+const Project = require("../models/projectModel");
+// const Project = require("../models/project");
 const admin = require("firebase-admin");
 const mongoose = require("mongoose");
 
