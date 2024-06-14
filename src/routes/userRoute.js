@@ -129,25 +129,36 @@ router.get("/me", async (req, res) => {
 router.get("/users", async (req, res) => {
   const filters = req.query; // Expect multiple attribute-value pairs
 
+  if (filters.roles) {
+    const rolesArray = filters.roles.split(",");
+    try {
+      const users = await User.find({ role: { $in: rolesArray } });
+      res.status(200).json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching users", error });
+    }
+  } else {
+    const filterObject = {};
+    for (const key in filters) {
+      filterObject[key] = filters[key];
+    }
+
+    try {
+      const users = await User.find(
+        Object.keys(filters).length === 0 ? {} : filterObject
+      )
+        .populate("organizations") // Populate sendby field with name and email
+        .populate("team");
+
+      res.json(users);
+    } catch (err) {
+      console.error(err); // Log the error for debugging
+      res.status(500).json({ message: "Server error" });
+    }
+  }
   // if (Object.keys(filters).length === 0) {
   //   return res.status(400).json({ message: "Missing filters in query" });
   // }
-
-  const filterObject = {};
-  for (const key in filters) {
-    filterObject[key] = filters[key];
-  }
-
-  try {
-    const users = await User.find(
-      Object.keys(filters).length === 0 ? {} : filterObject
-    );
-
-    res.json(users);
-  } catch (err) {
-    console.error(err); // Log the error for debugging
-    res.status(500).json({ message: "Server error" });
-  }
 });
 
 router.get("/userProjects", async (req, res) => {
