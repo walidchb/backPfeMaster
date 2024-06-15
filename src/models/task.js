@@ -14,7 +14,7 @@ const TaskSchema = new mongoose.Schema({
     required: [true, "Priorité is required"],
     enum: {
       values: ["A", "B", "C", "D", "E"],
-      message: "Role must be one of 'A', 'B', 'C', 'D', 'E'",
+      message: "status must be one of 'Todo', 'Inprogress', 'Inreview', 'Done'",
     },
   },
   status: {

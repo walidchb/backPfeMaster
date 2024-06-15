@@ -59,22 +59,7 @@ const userSchema = new mongoose.Schema({
       ref: "Organization",
     },
   ],
-  // businessName: {
-  //   type: String,
-  //   validate: {
-  //     validator: async function (value) {
-  //       if (this.role === "orgBoss") {
-  //         const count = await mongoose.models.User.countDocuments({
-  //           businessName: value,
-  //         });
-  //         return count === 0;
-  //       }
-  //       return true;
-  //     },
-  //     message: "Business name is already in use",
-  //   },
-  //   default: null,
-  // },
+
   country: {
     type: String,
     default: null,

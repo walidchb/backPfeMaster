@@ -46,14 +46,24 @@ const createInvitation = async (req, res) => {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // Validate ID format
-  if (
-    !mongoose.Types.ObjectId.isValid(sendby) ||
-    !mongoose.Types.ObjectId.isValid(sendto) ||
-    !mongoose.Types.ObjectId.isValid(organisation) ||
-    !mongoose.Types.ObjectId.isValid(team)
-  ) {
-    return res.status(400).json({ message: "Invalid ID format" });
+  // Check if sendby is valid ObjectId
+  if (!sendby || !mongoose.Types.ObjectId.isValid(sendby)) {
+    return res.status(400).json({ message: "Invalid or missing 'sendby' ID" });
+  }
+
+  // Check if sendto is valid ObjectId
+  if (!sendto || !mongoose.Types.ObjectId.isValid(sendto)) {
+    return res.status(400).json({ message: "Invalid or missing 'sendto' ID" });
+  }
+
+  // Check if organisation is valid ObjectId
+  if (!organisation || !mongoose.Types.ObjectId.isValid(organisation)) {
+    return res.status(400).json({ message: "Invalid or missing 'organisation' ID" });
+  }
+
+  // Check if team is provided and valid ObjectId
+  if (team && !mongoose.Types.ObjectId.isValid(team)) {
+    return res.status(400).json({ message: "Invalid 'team' ID" });
   }
 
   try {

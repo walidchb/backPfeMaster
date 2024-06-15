@@ -1,6 +1,8 @@
 const Task = require("../models/task");
 const User = require("../models/user");
-const Project = require("../models/project");
+const Project = require("../models/projectModel");
+
+// const Project = require("../models/project");
 const Team = require("../models/team");
 const mongoose = require("mongoose");
 
@@ -17,12 +19,12 @@ const getTasks = async (req, res) => {
     if (key === "affectedto" || key === "projet" || key === "team") {
       // Check if it's an array (multiple IDs) or a single ID
       const ids = Array.isArray(filters[key]) ? filters[key] : [filters[key]];
-      
+
       // Validate each ID
-      if (!ids.every(id => mongoose.Types.ObjectId.isValid(id))) {
+      if (!ids.every((id) => mongoose.Types.ObjectId.isValid(id))) {
         return res.status(400).json({ message: `Invalid ObjectId in ${key}` });
       }
-      
+
       // Use $in operator for arrays
       filterObject[key] = { $in: ids };
     } else {

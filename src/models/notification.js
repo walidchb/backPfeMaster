@@ -1,11 +1,11 @@
 const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema({
-  recipient: {
+  recipients: [{
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "User", // Reference to the User model (who receives the notification)
-  },
+  }],
   content: {
     type: String,
     required: true,
@@ -20,10 +20,16 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     ref: "Organization", // Reference to the Organization model
   },
-  seen: {
-    type: Boolean,
-    default: false,
-  },
+  seen: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    seen: {
+      type: Boolean,
+      default: false,
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

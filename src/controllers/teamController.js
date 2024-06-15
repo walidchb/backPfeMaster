@@ -1,5 +1,6 @@
 const Team = require("../models/team");
 const Organization = require("../models/organization");
+
 const User = require("../models/user");
 const mongoose = require("mongoose");
 
@@ -114,7 +115,7 @@ const deleteTeam = async (req, res) => {
 
 // update Team
 const updateTeam = async (req, res) => {
-  const { id } = req.params;
+  const { id } = req.query;
 
   // Validate ID format
   if (!mongoose.Types.ObjectId.isValid(id)) {
