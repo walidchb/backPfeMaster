@@ -207,19 +207,23 @@ router.get("/users", async (req, res) => {
   } else {
     const filterObject = {};
     for (const key in filters) {
-      filterObject[key] = filters[key];
+      if (key === 'team') {
+        // Séparer les identifiants d'équipe par des virgules
+        const teamIds = filters[key].split(',').map(id => new mongoose.Types.ObjectId(id));
+        filterObject[key] = { $in: teamIds };
+      } else {
+        filterObject[key] = filters[key];
+      }
     }
 
     try {
-      const users = await User.find(
-        Object.keys(filters).length === 0 ? {} : filterObject
-      )
-        .populate("organizations") // Populate sendby field with name and email
+      const users = await User.find(filterObject)
+        .populate("organizations")
         .populate("team");
 
       res.json(users);
     } catch (err) {
-      console.error(err); // Log the error for debugging
+      console.error(err);
       res.status(500).json({ message: "Server error" });
     }
   }

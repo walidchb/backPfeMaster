@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     ref: "User", // Reference to the User model (who receives the notification)
   }],
   content: {
-    type: String,
+    type: Object,
     required: true,
   },
   type: {
