@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 
 // Get Notifications for a specific user
 const getNotifications = async (req, res) => {
-  const { recipient, organization } = req.body; // Assuming user ID and organization ID are in the request body
+  const { recipient, organization } = req.query; // Assuming user ID and organization ID are in the request body
 
   console.log("recipientId", recipient);
   console.log("organizationId", organization);
@@ -79,7 +79,7 @@ const createNotification = async (req, res) => {
 
 // Update a Notification (assuming you want to update the `seen` field)
 const updateNotification = async (req, res) => {
-  const { notificationId, userId } = req.params;
+  const { notificationId, userId } = req.body;
 
   // Validate notification ID and user ID format
   if (!mongoose.Types.ObjectId.isValid(notificationId)) {
