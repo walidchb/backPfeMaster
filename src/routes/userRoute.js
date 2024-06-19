@@ -5,7 +5,7 @@ const Task = require("../models/task");
 const Project = require("../models/projectModel");
 const admin = require("firebase-admin");
 const mongoose = require("mongoose");
-const { ObjectId } = require('mongoose').Types;
+// const { ObjectId } = require('mongoose').Types;
 
 async function getUserTasks(userId, organizationId, teamId) {
   try {
@@ -210,7 +210,7 @@ router.get("/users", async (req, res) => {
     for (const key in filters) {
       if (key === 'team') {
         // Séparer les identifiants d'équipe par des virgules
-        const teamIds = filters[key].split(',').map(id => new mongoose.Types.ObjectId(id));
+        const teamIds = filters[key].split(',').map(id => id);
         filterObject[key] = { $in: teamIds };
       } else {
         filterObject[key] = filters[key];

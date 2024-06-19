@@ -170,6 +170,8 @@ const updateInvitation = async (req, res) => {
         return res.status(404).json({ message: "New Organization not found" });
       }
     }
+
+    // Check if new team exists
     if (updates.includes("team")) {
       const newTeamId = req.body.team;
       if (!mongoose.Types.ObjectId.isValid(newTeamId)) {
@@ -184,10 +186,15 @@ const updateInvitation = async (req, res) => {
     updates.forEach((update) => (invitation[update] = req.body[update]));
 
     const updatedInvitation = await invitation.save();
-    res.json(updatedInvitation);
+    const populatedInvitation = await Invitation.findById(updatedInvitation._id)
+      .populate("sendby")
+      .populate("sendto")
+      .populate("team")
+      .populate("organisation");
+    return res.json(populatedInvitation);
   } catch (err) {
     console.error(err);
-    res.status(400).json({ message: "Error updating invitation" });
+    return res.status(400).json({ message: "Error updating invitation" });
   }
 };
 
