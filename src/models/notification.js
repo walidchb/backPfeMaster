@@ -1,29 +1,35 @@
 const mongoose = require("mongoose");
 
 const notificationSchema = new mongoose.Schema({
-  recipient: {
+  recipients: [{
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "User", // Reference to the User model (who receives the notification)
-  },
+  }],
   content: {
-    type: String,
+    type: Object,
     required: true,
   },
   type: {
     type: String,
     required: true,
-    enum: ["project", "task", "reminder", "invitaion", "other"], // Define notification types
+    enum: ["project", "task", "reminder", "invitation", "comment"], // Define notification types
   },
   organization: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
     ref: "Organization", // Reference to the Organization model
   },
-  seen: {
-    type: Boolean,
-    default: false,
-  },
+  seen: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    seen: {
+      type: Boolean,
+      default: false,
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now,
