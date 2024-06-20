@@ -1,11 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
-const Project = require("../models/projectModel");
 const Task = require("../models/task");
-// const Project = require("../models/project");
+const Project = require("../models/projectModel");
 const admin = require("firebase-admin");
 const mongoose = require("mongoose");
+// const { ObjectId } = require('mongoose').Types;
 
 async function getUserTasks(userId, organizationId, teamId) {
   try {
@@ -102,6 +102,74 @@ async function getUserProjects(userId) {
   }
 }
 
+async function getUserTasks(userId, organizationId, teamId) {
+  try {
+    console.log(1);
+    console.log("user id = ", userId)
+    const user = await User.findById(userId).populate("team");
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+    console.log(2);
+
+    let tasks = [];
+
+    switch (user.role) {
+      case "orgBoss":
+        const Orgprojects = await Project.find({
+          organization: organizationId,
+        })
+        .populate("teams")
+        .populate("tasks") // Optionally populate team details
+        .populate("boss"); // Optionally populate project boss details
+
+        console.log("projects = ", Orgprojects.length)
+        
+        tasks = Orgprojects.reduce((acc, project) => {
+          return acc.concat(project.tasks);
+        }, []);
+        break;
+      case "prjctBoss":
+        const Bossprojects = await Project.find({
+          boss: userId,
+          organization: organizationId,
+        })
+        .populate("teams")
+        .populate("tasks") // Optionally populate team details
+        .populate("boss"); // Optionally populate project boss details
+
+        console.log("projects = ", Bossprojects.length)
+        
+        tasks = Bossprojects.reduce((acc, project) => {
+          return acc.concat(project.tasks);
+        }, []);
+        break;
+      case "teamBoss":
+        console.log("teamboss")
+        const Teamtasks = await Task.find({
+          team: teamId
+        })
+        tasks = Teamtasks;
+        break;
+      case "employee":
+        console.log("employ")
+        const employtasks = await Task.find({
+          affectedto: userId,
+          team: teamId
+        })
+        tasks = employtasks;
+        break;
+      default:
+        throw new Error("Role not recognized or no tasks to display for this role.");
+    }
+    return tasks;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
 // Get current user (`/me`)
 router.get("/me", async (req, res) => {
   // const { email } = req.body; // Expect an array of attribute-value pairs
@@ -140,19 +208,23 @@ router.get("/users", async (req, res) => {
   } else {
     const filterObject = {};
     for (const key in filters) {
-      filterObject[key] = filters[key];
+      if (key === 'team') {
+        // Séparer les identifiants d'équipe par des virgules
+        const teamIds = filters[key].split(',').map(id => id);
+        filterObject[key] = { $in: teamIds };
+      } else {
+        filterObject[key] = filters[key];
+      }
     }
 
     try {
-      const users = await User.find(
-        Object.keys(filters).length === 0 ? {} : filterObject
-      )
-        .populate("organizations") // Populate sendby field with name and email
+      const users = await User.find(filterObject)
+        .populate("organizations")
         .populate("team");
 
       res.json(users);
     } catch (err) {
-      console.error(err); // Log the error for debugging
+      console.error(err);
       res.status(500).json({ message: "Server error" });
     }
   }

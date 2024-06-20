@@ -3,29 +3,44 @@ const mongoose = require("mongoose");
 
 // Get Notifications for a specific user
 const getNotifications = async (req, res) => {
-  const { recipient, organization } = req.body; // Assuming user ID is in the URL parameter
-  console.log("recipientId");
+  const { recipient, organization } = req.query; // Assuming user ID and organization ID are in the request body
 
-  console.log(req.body.recipient);
-  console.log("organizationId");
+  console.log("recipientId", recipient);
+  console.log("organizationId", organization);
 
-  console.log(req.body.organization);
-
-  // Validate user ID format (optional)
+  // Validate user ID and organization ID format
   if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
-  } else if (!mongoose.Types.ObjectId.isValid(organization)) {
-    return res.status(400).json({ message: "Invalid organization ID" });
+  }
+  if (!mongoose.Types.ObjectId.isValid(organization)) {
+    return res.status(400).json({ message: "Invalid Organization ID" });
   }
 
   try {
     const notifications = await Notification.find({
-      recipient: recipient,
+      recipients: { $in: [recipient] }, // Ensure the recipient is in the recipients array
       organization: organization,
     })
-      .populate("recipient") // Populates recipient details
-      .populate("organization"); // Populates organization details;
-    res.json(notifications);
+      .populate({
+        path: "recipients",
+        select: "_id nom prenom",
+        match: { _id: recipient }, // Filter recipients to match only the specific user
+      })
+      .populate("organization", "_id Name"); // Populate organization details
+
+    // Filter out notifications where recipients array might not match the specific user (although it's unlikely with the current query)
+    const filteredNotifications = notifications.filter((notification) => notification.recipients.length > 0);
+
+    // Map through notifications to filter seen status for the specific recipient
+    const notificationsToSend = filteredNotifications.map((notification) => {
+      const seenStatus = notification.seen.find((item) => item.userId.toString() === recipient);
+      return {
+        ...notification.toObject(),
+        seen: seenStatus ? [seenStatus] : [], // Only include seen status for the specific recipient
+      };
+    });
+
+    res.json(notificationsToSend);
   } catch (err) {
     console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
@@ -34,25 +49,25 @@ const getNotifications = async (req, res) => {
 
 // Create a Notification
 const createNotification = async (req, res) => {
-  const { recipient, type, content, organization } = req.body; // Destructure required fields
+  const { recipients, type, content, organization } = req.body; // Destructure required fields
 
   // Validate required fields
-  if (!recipient || !content) {
+  if (!recipients || !content || !content.message) {
     return res.status(400).json({ message: "Missing required fields" });
   }
 
-  // Validate user ID format (optional)
-  if (!mongoose.Types.ObjectId.isValid(recipient)) {
-    return res.status(400).json({ message: "Invalid User ID" });
+  // Validate recipients format (array of valid ObjectIds)
+  if (!Array.isArray(recipients) || recipients.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+    return res.status(400).json({ message: "Invalid User IDs" });
   }
 
   try {
     const newNotification = new Notification({
-      recipient,
-      organization,
-      content,
+      recipients: recipients.map((id) => id), // Convert each recipient to ObjectId
+      organization: organization, // Convert organization to ObjectId
+      content, // Utiliser l'objet content tel quel
       type,
-      seen: false,
+      seen: recipients.map((id) => ({ userId: id, seen: false })), // Initialize seen status for each recipient
     });
     const savedNotification = await newNotification.save();
     res.status(201).json(savedNotification); // Created
@@ -64,33 +79,25 @@ const createNotification = async (req, res) => {
 
 // Update a Notification (assuming you want to update the `seen` field)
 const updateNotification = async (req, res) => {
-  const { notificationId } = req.params;
+  const { notificationId, userId } = req.body;
 
-  // Validate notification ID format
+  // Validate notification ID and user ID format
   if (!mongoose.Types.ObjectId.isValid(notificationId)) {
     return res.status(400).json({ message: "Invalid Notification ID" });
   }
-
-  const updates = Object.keys(req.body); // Get update fields from request body
-  const allowedUpdates = ["seen"]; // Only allow updating the `seen` field
-
-  const isValidUpdate = updates.every((update) =>
-    allowedUpdates.includes(update)
-  );
-
-  if (!isValidUpdate) {
-    return res.status(400).json({ message: "Invalid update fields" });
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid User ID" });
   }
 
   try {
-    const notification = await Notification.findByIdAndUpdate(
-      notificationId,
-      { seen: true }, // Set `seen` to true
+    const notification = await Notification.findOneAndUpdate(
+      { _id: notificationId, "seen.userId": userId },
+      { $set: { "seen.$.seen": true } }, // Update the seen status for the specific user
       { new: true } // Return the updated document
     );
 
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found" });
+      return res.status(404).json({ message: "Notification not found or User not in recipients list" });
     }
     res.json(notification);
   } catch (err) {
@@ -99,24 +106,38 @@ const updateNotification = async (req, res) => {
   }
 };
 
-// Delete a Notification
-const deleteNotification = async (req, res) => {
-  const { notificationId } = req.params;
+// Delete a Notification for a specific user
+const deleteNotificationForUser = async (req, res) => {
+  const { notificationId, userId } = req.params;
 
-  // Validate notification ID format
+  // Validate notification ID and user ID format
   if (!mongoose.Types.ObjectId.isValid(notificationId)) {
     return res.status(400).json({ message: "Invalid Notification ID" });
   }
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).json({ message: "Invalid User ID" });
+  }
 
   try {
-    const deletedNotification = await Notification.findByIdAndDelete(
-      notificationId
-    );
+    const notification = await Notification.findById(notificationId);
 
-    if (!deletedNotification) {
+    if (!notification) {
       return res.status(404).json({ message: "Notification not found" });
     }
-    res.json({ message: "Notification deleted" });
+
+    // Remove user from recipients and seen arrays
+    notification.recipients = notification.recipients.filter((id) => id.toString() !== userId);
+    notification.seen = notification.seen.filter((entry) => entry.userId.toString() !== userId);
+
+    if (notification.recipients.length === 0) {
+      // If no recipients are left, delete the notification
+      await Notification.findByIdAndDelete(notificationId);
+      return res.json({ message: "Notification deleted" });
+    } else {
+      // Otherwise, save the updated notification
+      await notification.save();
+      return res.json({ message: "Notification updated" });
+    }
   } catch (err) {
     console.error(err); // Log the error for debugging
     res.status(500).json({ message: "Server error" });
@@ -127,5 +148,5 @@ module.exports = {
   getNotifications,
   createNotification,
   updateNotification,
-  deleteNotification,
+  deleteNotificationForUser,
 };
