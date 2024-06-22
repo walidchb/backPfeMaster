@@ -21,7 +21,7 @@ const TaskSchema = new mongoose.Schema({
     type: String,
     required: [true, "Status is required"],
     enum: {
-      values: ["Todo", "Inprogress", "Inreview", "Done"],
+      values: ["Todo", "Inprogress", "Inreview", "Done", "Cancel"],
       message: "status must be one of 'Todo', 'Inprogress', 'Inreview', 'Done'",
     },
     default: "Todo",
