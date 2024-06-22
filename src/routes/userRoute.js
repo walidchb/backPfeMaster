@@ -76,7 +76,7 @@ async function getUserTasks(userId, organizationId, teamId) {
     throw error;
   }
 }
-async function getUserProjects(userId) {
+async function getUserProjects(userId, organizationId) {
   try {
     console.log(1);
     const user = await User.findById(userId).populate("team");
@@ -91,6 +91,7 @@ async function getUserProjects(userId) {
 
     const projects = await Project.find({
       teams: { $in: userTeams },
+      organization: organizationId,
     })
       .populate("teams") // Optionally populate team details
       .populate("boss"); // Optionally populate project boss details
@@ -105,7 +106,7 @@ async function getUserProjects(userId) {
 async function getUserTasks(userId, organizationId, teamId) {
   try {
     console.log(1);
-    console.log("user id = ", userId)
+    console.log("user id = ", userId);
     const user = await User.findById(userId).populate("team");
 
     if (!user) {
@@ -120,12 +121,12 @@ async function getUserTasks(userId, organizationId, teamId) {
         const Orgprojects = await Project.find({
           organization: organizationId,
         })
-        .populate("teams")
-        .populate("tasks") // Optionally populate team details
-        .populate("boss"); // Optionally populate project boss details
+          .populate("teams")
+          .populate("tasks") // Optionally populate team details
+          .populate("boss"); // Optionally populate project boss details
 
-        console.log("projects = ", Orgprojects.length)
-        
+        console.log("projects = ", Orgprojects.length);
+
         tasks = Orgprojects.reduce((acc, project) => {
           return acc.concat(project.tasks);
         }, []);
@@ -135,33 +136,35 @@ async function getUserTasks(userId, organizationId, teamId) {
           boss: userId,
           organization: organizationId,
         })
-        .populate("teams")
-        .populate("tasks") // Optionally populate team details
-        .populate("boss"); // Optionally populate project boss details
+          .populate("teams")
+          .populate("tasks") // Optionally populate team details
+          .populate("boss"); // Optionally populate project boss details
 
-        console.log("projects = ", Bossprojects.length)
-        
+        console.log("projects = ", Bossprojects.length);
+
         tasks = Bossprojects.reduce((acc, project) => {
           return acc.concat(project.tasks);
         }, []);
         break;
       case "teamBoss":
-        console.log("teamboss")
+        console.log("teamboss");
         const Teamtasks = await Task.find({
-          team: teamId
-        })
+          team: teamId,
+        });
         tasks = Teamtasks;
         break;
       case "employee":
-        console.log("employ")
+        console.log("employ");
         const employtasks = await Task.find({
           affectedto: userId,
-          team: teamId
-        })
+          team: teamId,
+        });
         tasks = employtasks;
         break;
       default:
-        throw new Error("Role not recognized or no tasks to display for this role.");
+        throw new Error(
+          "Role not recognized or no tasks to display for this role."
+        );
     }
     return tasks;
   } catch (error) {
@@ -208,9 +211,9 @@ router.get("/users", async (req, res) => {
   } else {
     const filterObject = {};
     for (const key in filters) {
-      if (key === 'team') {
+      if (key === "team") {
         // Séparer les identifiants d'équipe par des virgules
-        const teamIds = filters[key].split(',').map(id => id);
+        const teamIds = filters[key].split(",").map((id) => id);
         filterObject[key] = { $in: teamIds };
       } else {
         filterObject[key] = filters[key];
@@ -234,13 +237,13 @@ router.get("/users", async (req, res) => {
 });
 
 router.get("/userProjects", async (req, res) => {
-  const { userId } = req.query;
+  const { userId, organizationId } = req.query;
   console.log("userId");
 
   // console.log(userId.userId);
 
   try {
-    const projects = await getUserProjects(userId);
+    const projects = await getUserProjects(userId, organizationId);
     res.status(200).json(projects);
   } catch (error) {
     res.status(500).json({ error: error.message });
