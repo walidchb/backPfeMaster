@@ -11,7 +11,10 @@ async function getUserTasks(userId, organizationId, teamId) {
   try {
     console.log(1);
     console.log("user id = ", userId);
-    const user = await User.findById(userId).populate("team");
+    const user = await User.findById(userId)
+      .populate("team")
+      .populate("projet")
+      .populate("affectedto");
 
     if (!user) {
       throw new Error("User not found");
