@@ -33,7 +33,10 @@ const getProjects = async (req, res) => {
     const projects = await Project.find(filterObject)
       .populate("organization")
       .populate("boss")
-      .populate("tasks");
+      .populate({
+        path: "tasks",
+        populate: [{ path: "projet" }, { path: "team" }],
+      });
     res.json(projects);
   } catch (err) {
     console.error(err); // Log the error for debugging
