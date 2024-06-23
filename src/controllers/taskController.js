@@ -227,9 +227,10 @@ const updateTask = async (req, res) => {
 
     updates.forEach((update) => (task[update] = req.body[update]));
 
-    const updatedTask = await task.save();
+    const updatedTask = await task.save()
+    const populatedTask = await Task.findById(updatedTask._id).populate("team")
 
-    res.json(updatedTask);
+    res.json(populatedTask);
   } catch (err) {
     console.error(err); // Log the error for debugging
     res.status(400).json({ message: err.message });

@@ -3,46 +3,51 @@ const mongoose = require("mongoose");
 
 // Get Notifications for a specific user
 const getNotifications = async (req, res) => {
-  const { recipient, organization } = req.query; // Assuming user ID and organization ID are in the request body
+  const { recipient, organization } = req.query;
 
   console.log("recipientId", recipient);
-  console.log("organizationId", organization);
+  
 
-  // Validate user ID and organization ID format
+  // Validate recipient ID format
   if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
   }
-  if (!mongoose.Types.ObjectId.isValid(organization)) {
-    return res.status(400).json({ message: "Invalid Organization ID" });
+
+  // Prepare the query
+  let query = { recipients: { $in: [recipient] } };
+
+  // Add organization to query if provided
+  if (organization) {
+    // Validate organization ID format
+    console.log("organizationId", organization);
+    if (!mongoose.Types.ObjectId.isValid(organization)) {
+      return res.status(400).json({ message: "Invalid Organization ID" });
+    }
+    query.organization = organization;
   }
 
   try {
-    const notifications = await Notification.find({
-      recipients: { $in: [recipient] }, // Ensure the recipient is in the recipients array
-      organization: organization,
-    })
+    const notifications = await Notification.find(query)
       .populate({
         path: "recipients",
         select: "_id nom prenom",
-        match: { _id: recipient }, // Filter recipients to match only the specific user
+        match: { _id: recipient },
       })
-      .populate("organization", "_id Name"); // Populate organization details
+      .populate("organization", "_id Name");
 
-    // Filter out notifications where recipients array might not match the specific user (although it's unlikely with the current query)
     const filteredNotifications = notifications.filter((notification) => notification.recipients.length > 0);
 
-    // Map through notifications to filter seen status for the specific recipient
     const notificationsToSend = filteredNotifications.map((notification) => {
       const seenStatus = notification.seen.find((item) => item.userId.toString() === recipient);
       return {
         ...notification.toObject(),
-        seen: seenStatus ? [seenStatus] : [], // Only include seen status for the specific recipient
+        seen: seenStatus ? [seenStatus] : [],
       };
     });
 
     res.json(notificationsToSend);
   } catch (err) {
-    console.error(err); // Log the error for debugging
+    console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 };
