@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ["project", "task", "reminder", "invitation", "comment"], // Define notification types
+    enum: ["project", "task", "reminder", "invitation", "comment", "delegation"], // Define notification types
   },
   organization: {
     type: mongoose.Schema.Types.ObjectId,
