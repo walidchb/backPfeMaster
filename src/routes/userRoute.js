@@ -11,10 +11,7 @@ async function getUserTasks(userId, organizationId, teamId) {
   try {
     console.log(1);
     console.log("user id = ", userId);
-    const user = await User.findById(userId)
-      .populate("team")
-      .populate("projet")
-      .populate("affectedto");
+    const user = await User.findById(userId).populate("team");
 
     if (!user) {
       throw new Error("User not found");
@@ -57,7 +54,10 @@ async function getUserTasks(userId, organizationId, teamId) {
         console.log("teamboss");
         const Teamtasks = await Task.find({
           team: teamId,
-        });
+        })
+          .populate("affectedto")
+          .populate("projet")
+          .populate("team");
         tasks = Teamtasks;
         break;
       case "employee":
@@ -65,7 +65,10 @@ async function getUserTasks(userId, organizationId, teamId) {
         const employtasks = await Task.find({
           affectedto: userId,
           team: teamId,
-        });
+        })
+          .populate("affectedto")
+          .populate("projet")
+          .populate("team");
         tasks = employtasks;
         break;
       default:
@@ -100,76 +103,6 @@ async function getUserProjects(userId, organizationId) {
       .populate("boss"); // Optionally populate project boss details
 
     return projects;
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
-}
-
-async function getUserTasks(userId, organizationId, teamId) {
-  try {
-    console.log(1);
-    console.log("user id = ", userId);
-    const user = await User.findById(userId).populate("team");
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-    console.log(2);
-
-    let tasks = [];
-
-    switch (user.role) {
-      case "orgBoss":
-        const Orgprojects = await Project.find({
-          organization: organizationId,
-        })
-          .populate("teams")
-          .populate("tasks") // Optionally populate team details
-          .populate("boss"); // Optionally populate project boss details
-
-        console.log("projects = ", Orgprojects.length);
-
-        tasks = Orgprojects.reduce((acc, project) => {
-          return acc.concat(project.tasks);
-        }, []);
-        break;
-      case "prjctBoss":
-        const Bossprojects = await Project.find({
-          boss: userId,
-          organization: organizationId,
-        })
-          .populate("teams")
-          .populate("tasks") // Optionally populate team details
-          .populate("boss"); // Optionally populate project boss details
-
-        console.log("projects = ", Bossprojects.length);
-
-        tasks = Bossprojects.reduce((acc, project) => {
-          return acc.concat(project.tasks);
-        }, []);
-        break;
-      case "teamBoss":
-        console.log("teamboss");
-        const Teamtasks = await Task.find({
-          team: teamId,
-        });
-        tasks = Teamtasks;
-        break;
-      case "employee":
-        console.log("employ");
-        const employtasks = await Task.find({
-          affectedto: userId,
-          team: teamId,
-        });
-        tasks = employtasks;
-        break;
-      default:
-        throw new Error(
-          "Role not recognized or no tasks to display for this role."
-        );
-    }
-    return tasks;
   } catch (error) {
     console.error(error);
     throw error;
