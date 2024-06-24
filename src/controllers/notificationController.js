@@ -12,31 +12,42 @@ const getNotifications = async (req, res) => {
   if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
   }
-  if (!mongoose.Types.ObjectId.isValid(organization)) {
-    return res.status(400).json({ message: "Invalid Organization ID" });
+
+  // Prepare the query
+  let query = { recipients: { $in: [recipient] } };
+
+  // Add organization to query if provided
+  if (organization) {
+    // Validate organization ID format
+    console.log("organizationId", organization);
+    if (!mongoose.Types.ObjectId.isValid(organization)) {
+      return res.status(400).json({ message: "Invalid Organization ID" });
+    }
+    query.organization = organization;
   }
 
   try {
-    const notifications = await Notification.find({
-      recipients: { $in: [recipient] }, // Ensure the recipient is in the recipients array
-      organization: organization,
-    })
+    const notifications = await Notification.find(query)
       .populate({
         path: "recipients",
         select: "_id nom prenom",
-        match: { _id: recipient }, // Filter recipients to match only the specific user
+        match: { _id: recipient },
       })
-      .populate("organization", "_id Name"); // Populate organization details
+      .populate("organization", "_id Name");
 
     // Filter out notifications where recipients array might not match the specific user (although it's unlikely with the current query)
-    const filteredNotifications = notifications.filter((notification) => notification.recipients.length > 0);
+    const filteredNotifications = notifications.filter(
+      (notification) => notification.recipients.length > 0
+    );
 
     // Map through notifications to filter seen status for the specific recipient
     const notificationsToSend = filteredNotifications.map((notification) => {
-      const seenStatus = notification.seen.find((item) => item.userId.toString() === recipient);
+      const seenStatus = notification.seen.find(
+        (item) => item.userId.toString() === recipient
+      );
       return {
         ...notification.toObject(),
-        seen: seenStatus ? [seenStatus] : [], // Only include seen status for the specific recipient
+        seen: seenStatus ? [seenStatus] : [],
       };
     });
 
@@ -57,7 +68,10 @@ const createNotification = async (req, res) => {
   }
 
   // Validate recipients format (array of valid ObjectIds)
-  if (!Array.isArray(recipients) || recipients.some((id) => !mongoose.Types.ObjectId.isValid(id))) {
+  if (
+    !Array.isArray(recipients) ||
+    recipients.some((id) => !mongoose.Types.ObjectId.isValid(id))
+  ) {
     return res.status(400).json({ message: "Invalid User IDs" });
   }
 
@@ -97,7 +111,11 @@ const updateNotification = async (req, res) => {
     );
 
     if (!notification) {
-      return res.status(404).json({ message: "Notification not found or User not in recipients list" });
+      return res
+        .status(404)
+        .json({
+          message: "Notification not found or User not in recipients list",
+        });
     }
     res.json(notification);
   } catch (err) {
@@ -126,8 +144,12 @@ const deleteNotificationForUser = async (req, res) => {
     }
 
     // Remove user from recipients and seen arrays
-    notification.recipients = notification.recipients.filter((id) => id.toString() !== userId);
-    notification.seen = notification.seen.filter((entry) => entry.userId.toString() !== userId);
+    notification.recipients = notification.recipients.filter(
+      (id) => id.toString() !== userId
+    );
+    notification.seen = notification.seen.filter(
+      (entry) => entry.userId.toString() !== userId
+    );
 
     if (notification.recipients.length === 0) {
       // If no recipients are left, delete the notification

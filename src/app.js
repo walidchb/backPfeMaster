@@ -20,7 +20,7 @@ const commentRoute = require("./routes/commentRoute");
 const notificationRoute = require("./routes/notificationRoute");
 const invitationRoute = require("./routes/invitationRoute");
 const sendEmailRoute = require("./routes/sendEmailRoute");
-
+const delegationRoute = require("./routes/delegationRoute");
 // =======
 // >>>>>>> a28265b8e5ac52ec9a9eded7de38aeb729310987
 
@@ -44,6 +44,7 @@ app.use("/comment", commentRoute);
 app.use("/notification", notificationRoute);
 app.use("/invitation", invitationRoute);
 app.use("/send-email", sendEmailRoute);
+app.use("/delegation", delegationRoute);
 
 app.use((err, req, res, next) => {
   if (err instanceof mongoose.Error.ValidationError) {

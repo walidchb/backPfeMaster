@@ -20,15 +20,30 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
-  role: {
-    type: String,
-    required: [true, "Role is required"],
-    enum: {
-      values: ["employee", "orgBoss", "teamBoss", "prjctBoss", "individual"],
-      message:
-        "Role must be one of 'employee', 'orgBoss', 'teamBoss', or 'prjctBoss'",
+  roles: [
+    {
+      role: {
+        type: String,
+        required: [true, "Role is required"],
+        enum: {
+          values: [
+            "employee",
+            "orgBoss",
+            "teamBoss",
+            "prjctBoss",
+            "individual",
+          ],
+          message:
+            "Role must be one of 'employee', 'orgBoss', 'teamBoss', 'prjctBoss', or 'individual'",
+        },
+      },
+      organization: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Organization",
+        default: null,
+      },
     },
-  },
+  ],
   email: {
     type: String,
     required: [true, "Email is required"],

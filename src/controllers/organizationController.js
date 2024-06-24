@@ -115,7 +115,7 @@ const updateOrganization = async (req, res) => {
   }
 
   const updates = Object.keys(req.body);
-  const allowedUpdates = ["Name", "Boss"];
+  const allowedUpdates = ["Name", "Boss", "country", "province", "street"];
   const isValidUpdate = updates.every((update) =>
     allowedUpdates.includes(update)
   );

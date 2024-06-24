@@ -9,18 +9,21 @@ const mongoose = require("mongoose");
 
 async function getUserTasks(userId, organizationId, teamId) {
   try {
-    console.log(1);
-    console.log("user id = ", userId);
     const user = await User.findById(userId).populate("team");
 
     if (!user) {
       throw new Error("User not found");
     }
-    console.log(2);
 
     let tasks = [];
+    const userRole = user.roles.find(
+      (r) => r.organization && r.organization.toString() === organizationId
+    );
 
-    switch (user.role) {
+    if (!userRole) {
+      throw new Error("User not associated with this organization");
+    }
+    switch (userRole.role) {
       case "orgBoss":
         const Orgprojects = await Project.find({
           organization: organizationId,
@@ -28,8 +31,6 @@ async function getUserTasks(userId, organizationId, teamId) {
           .populate("teams")
           .populate("tasks") // Optionally populate team details
           .populate("boss"); // Optionally populate project boss details
-
-        console.log("projects = ", Orgprojects.length);
 
         tasks = Orgprojects.reduce((acc, project) => {
           return acc.concat(project.tasks);
@@ -44,32 +45,26 @@ async function getUserTasks(userId, organizationId, teamId) {
           .populate("tasks") // Optionally populate team details
           .populate("boss"); // Optionally populate project boss details
 
-        console.log("projects = ", Bossprojects.length);
-
         tasks = Bossprojects.reduce((acc, project) => {
           return acc.concat(project.tasks);
         }, []);
         break;
       case "teamBoss":
-        console.log("teamboss");
-        const Teamtasks = await Task.find({
+        tasks = await Task.find({
           team: teamId,
         })
           .populate("affectedto")
           .populate("projet")
           .populate("team");
-        tasks = Teamtasks;
         break;
       case "employee":
-        console.log("employ");
-        const employtasks = await Task.find({
+        tasks = await Task.find({
           affectedto: userId,
           team: teamId,
         })
           .populate("affectedto")
           .populate("projet")
           .populate("team");
-        tasks = employtasks;
         break;
       default:
         throw new Error(
@@ -84,13 +79,11 @@ async function getUserTasks(userId, organizationId, teamId) {
 }
 async function getUserProjects(userId, organizationId) {
   try {
-    console.log(1);
     const user = await User.findById(userId).populate("team");
 
     if (!user) {
       throw new Error("User not found");
     }
-    console.log(2);
 
     const userTeams = user.team.map((t) => t._id);
     console.log(3);
@@ -121,7 +114,7 @@ router.get("/me", async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
     const currentUser = await User.findOne({ email })
-      .populate("organizations") // Populate sendby field with name and email
+      .populate("roles.organization")
       .populate("team"); // Replace 'req.user.id' with your Firebase user ID extraction logic
     if (!currentUser) {
       return res.status(404).json({ message: "User not found" });
@@ -134,42 +127,65 @@ router.get("/me", async (req, res) => {
 
 // Get users based on dynamic attribute
 router.get("/users", async (req, res) => {
-  const filters = req.query; // Expect multiple attribute-value pairs
+  // const filters = req.query; // Expect multiple attribute-value pairs
+  const {
+    roles,
+    organizations,
+    "roles.organization": rolesOrganization,
+    ...otherFilters
+  } = req.query;
 
-  if (filters.roles) {
-    const rolesArray = filters.roles.split(",");
-    try {
-      const users = await User.find({ role: { $in: rolesArray } });
-      res.status(200).json(users);
-    } catch (error) {
-      res.status(500).json({ message: "Error fetching users", error });
+  try {
+    let query = {};
+
+    if (roles) {
+      const roleList = roles.split(",");
+      query["roles.role"] = { $in: roleList };
     }
-  } else {
-    const filterObject = {};
-    for (const key in filters) {
+
+    if (rolesOrganization) {
+      query["roles.organization"] = rolesOrganization;
+    }
+
+    if (organizations) {
+      query.organizations = organizations;
+    }
+
+    // Ajouter d'autres filtres si nécessaire
+    Object.keys(otherFilters).forEach((key) => {
       if (key === "team") {
-        // Séparer les identifiants d'équipe par des virgules
-        const teamIds = filters[key].split(",").map((id) => id);
-        filterObject[key] = { $in: teamIds };
+        const teamIds = otherFilters[key].split(",").map((id) => id);
+        query[key] = { $in: teamIds };
       } else {
-        filterObject[key] = filters[key];
+        query[key] = otherFilters[key];
       }
-    }
+    });
 
-    try {
-      const users = await User.find(filterObject)
-        .populate("organizations")
-        .populate("team");
+    const users = await User.find(query)
+      .populate("roles.organization")
+      .populate("team");
 
-      res.json(users);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ message: "Server error" });
-    }
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
   }
-  // if (Object.keys(filters).length === 0) {
-  //   return res.status(400).json({ message: "Missing filters in query" });
-  // }
+});
+
+// get all users qui ont role différent de orgBoss
+router.get("/Allusers", async (req, res) => {
+  try {
+    const users = await User.find({ "roles.role": { $ne: "orgBoss" } })
+      .populate("roles.organization")
+      .populate("team");
+
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching users", error: error.message });
+  }
 });
 
 router.get("/userProjects", async (req, res) => {
@@ -235,6 +251,13 @@ router.post("/check-user-exists", async (req, res) => {
 
 router.post("/users", async (req, res) => {
   try {
+    if (
+      req.body.roles &&
+      req.body.roles.length > 0 &&
+      req.body.roles[0].role === "individual"
+    ) {
+      req.body.roles[0].organization = null;
+    }
     const newUser = new User(req.body);
     const savedUser = await newUser.save();
     res.status(201).json(savedUser); // Created
@@ -280,16 +303,13 @@ router.patch("/users", async (req, res) => {
     "prenom",
     "phoneNumber",
     "gender",
-    "role",
+    "roles",
     "email",
-    "businessName",
-    "country",
-    "province",
-    "street",
+    "team",
   ]; // Allowed fields for update
-  const arrayUpdates = ["team", "organizations"];
-  const isValidUpdate = updates.every(
-    (update) => allowedUpdates.includes(update) || arrayUpdates.includes(update)
+  // const arrayUpdates = ["team", "organizations"];
+  const isValidUpdate = updates.every((update) =>
+    allowedUpdates.includes(update)
   );
 
   if (!isValidUpdate) {
@@ -298,33 +318,47 @@ router.patch("/users", async (req, res) => {
 
   try {
     // Separate regular updates and array updates
-    const regularUpdates = {};
-    const arrayUpdatesData = {};
-
-    updates.forEach((update) => {
-      if (arrayUpdates.includes(update)) {
-        arrayUpdatesData[update] = req.body[update];
-      } else {
-        regularUpdates[update] = req.body[update];
-      }
-    });
-
-    // Update regular fields
-    const user = await User.findByIdAndUpdate(id, regularUpdates, {
-      new: true,
-      runValidators: true,
-    });
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
     // Push new values to array fields
-    for (let key in arrayUpdatesData) {
-      if (arrayUpdatesData.hasOwnProperty(key)) {
-        user[key].push(arrayUpdatesData[key]);
+    updates.forEach((update) => {
+      if (update === "roles") {
+        // Gestion spéciale pour les rôles
+        const newRole = req.body.roles[0]; // On suppose qu'un seul rôle est envoyé à la fois
+
+        const individualRoleIndex = user.roles.findIndex(
+          (role) => role.role === "individual"
+        );
+
+        if (individualRoleIndex !== -1) {
+          // Si un rôle "individual" existe, on le remplace
+          user.roles[individualRoleIndex] = newRole;
+        } else {
+          // Sinon, on gère comme avant
+          const existingRoleIndex = user.roles.findIndex(
+            (role) =>
+              role.organization &&
+              role.organization.toString() === newRole.organization
+          );
+          if (existingRoleIndex !== -1) {
+            user.roles[existingRoleIndex] = newRole;
+          } else {
+            user.roles.push(newRole);
+          }
+        }
+      } else if (update === "team") {
+        // Gestion des équipes (inchangée)
+        const newTeams = req.body.team.filter(
+          (teamId) => !user.team.includes(teamId)
+        );
+        user.team = user.team.concat(newTeams);
+      } else {
+        user[update] = req.body[update];
       }
-    }
+    });
 
     await user.save();
 
