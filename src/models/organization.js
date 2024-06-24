@@ -13,6 +13,18 @@ const OrganizationSchema = new mongoose.Schema({
     //required: [true, "Boss is required"],
     ref: "User",
   },
+  country: {
+    type: String,
+    default: null,
+  },
+  province: {
+    type: String,
+    default: null,
+  },
+  street: {
+    type: String,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model("Organization", OrganizationSchema);
