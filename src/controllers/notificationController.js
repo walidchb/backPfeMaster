@@ -6,8 +6,6 @@ const getNotifications = async (req, res) => {
   const { recipient, organization } = req.query; // Assuming user ID and organization ID are in the request body
 
   console.log("recipientId", recipient);
-  console.log("organizationId", organization);
-
   // Validate user ID and organization ID format
   if (!mongoose.Types.ObjectId.isValid(recipient)) {
     return res.status(400).json({ message: "Invalid User ID" });
