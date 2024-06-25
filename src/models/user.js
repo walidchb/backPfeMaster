@@ -62,31 +62,7 @@ const userSchema = new mongoose.Schema({
     required: [true, "Password is required"],
     minlength: [6, "Password must be at least 6 characters long"],
   },
-  tasks: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Task",
-    },
-  ],
-  organizations: [
-    {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization",
-    },
-  ],
-
-  country: {
-    type: String,
-    default: null,
-  },
-  province: {
-    type: String,
-    default: null,
-  },
-  street: {
-    type: String,
-    default: null,
-  },
+  
 });
 
 // Hash password before saving the user
