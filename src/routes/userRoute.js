@@ -368,6 +368,66 @@ router.patch("/users", async (req, res) => {
   }
 });
 
+// update user in admin
+router.patch("/updateUser", async (req, res) => {
+  const { id } = req.query;
+
+  // Validate ID format
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const updates = Object.keys(req.body);
+  const allowedUpdates = [
+    "nom",
+    "prenom",
+    "phoneNumber",
+    "gender",
+    "roles",
+    "email",
+    "team",
+    "password"
+  ];
+
+  const isValidUpdate = updates.every((update) => allowedUpdates.includes(update));
+
+  if (!isValidUpdate) {
+    return res.status(400).json({ message: "Invalid update fields" });
+  }
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    updates.forEach((update) => {
+      if (update === "roles") {
+        // Remplacer complètement le tableau des rôles
+        user.roles = req.body.roles.map(role => ({
+          role: role.role,
+          organization: role.organization
+        }));
+      } else if (update === "team") {
+        // Remplacer complètement le tableau des équipes
+        user.team = req.body.team;
+      } else if (update === "password") {
+        // Le middleware pre-save se chargera du hachage du mot de passe
+        user.password = req.body.password;
+      } else {
+        user[update] = req.body[update];
+      }
+    });
+
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+
+
 // delete user by id
 router.delete("/users/:id", async (req, res) => {
   const { id } = req.params;
