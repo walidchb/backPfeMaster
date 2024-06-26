@@ -173,10 +173,20 @@ const updateOrganization = async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 };
+// get all organizations
+const getAllOrganizations = async (req, res) => {
+  try {
+    const organizations = await Organization.find().populate("Boss");
+    res.json(organizations);
+  } catch (err) {
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
 
 module.exports = {
   createOrganization,
   getOrganizations,
   deleteOrganization,
   updateOrganization,
+  getAllOrganizations
 };

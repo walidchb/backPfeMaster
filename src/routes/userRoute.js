@@ -306,6 +306,7 @@ router.patch("/users", async (req, res) => {
     "roles",
     "email",
     "team",
+    "uid"
   ]; // Allowed fields for update
   // const arrayUpdates = ["team", "organizations"];
   const isValidUpdate = updates.every((update) =>
@@ -368,6 +369,65 @@ router.patch("/users", async (req, res) => {
   }
 });
 
+// update user in admin
+router.patch("/updateUser", async (req, res) => {
+  const { id } = req.query;
+
+  // Validate ID format
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: "Invalid user ID" });
+  }
+
+  const updates = Object.keys(req.body);
+  const allowedUpdates = [
+    "nom",
+    "prenom",
+    "phoneNumber",
+    "gender",
+    "roles",
+    "email",
+    "team",
+    "password",
+    "uid"
+  ];
+
+  const isValidUpdate = updates.every((update) => allowedUpdates.includes(update));
+
+  if (!isValidUpdate) {
+    return res.status(400).json({ message: "Invalid update fields" });
+  }
+
+  try {
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    updates.forEach((update) => {
+      if (update === "roles") {
+        // Remplacer complètement le tableau des rôles
+        user.roles = req.body.roles.map(role => ({
+          role: role.role,
+          organization: role.organization
+        }));
+      } else if (update === "team") {
+        // Remplacer complètement le tableau des équipes
+        user.team = req.body.team;
+      } else if (update === "password") {
+        // Le middleware pre-save se chargera du hachage du mot de passe
+        user.password = req.body.password;
+      } else {
+        user[update] = req.body[update];
+      }
+    });
+
+    await user.save();
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // delete user by id
 router.delete("/users/:id", async (req, res) => {
   const { id } = req.params;
@@ -404,6 +464,44 @@ router.delete("/users", async (req, res) => {
     res.json({ message: "User deleted" });
   } catch (err) {
     res.status(500).json({ message: err }); // Internal server error
+  }
+});
+
+// modifier l'email et le mot de passe de compte
+router.patch("/update-compte", async (req, res) => {
+  const { currentEmail, newEmail, newPassword } = req.body;
+  console.log("req.body = ", req.body);
+
+  try {
+    // Vérifier si l'utilisateur existe
+    const user = await User.findOne({ email: currentEmail });
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    // Mettre à jour l'email si fourni
+    if (newEmail && newEmail !== currentEmail) {
+      // Vérifier si le nouvel email n'est pas déjà utilisé
+      const emailExists = await User.findOne({ email: newEmail });
+      if (emailExists) {
+        return res.status(400).json({ message: "Cet email est déjà utilisé" });
+      }
+      user.email = newEmail;
+    }
+
+    // Mettre à jour le mot de passe si fourni
+    if (newPassword) {
+      // Le hachage du mot de passe est géré par le middleware pre-save
+      user.password = newPassword;
+    }
+
+    // Sauvegarder les modifications
+    await user.save();
+
+    res.json({ message: "Informations d'identification mises à jour avec succès" });
+  } catch (err) {
+    console.error("Erreur lors de la mise à jour du compte :", err);
+    res.status(500).json({ message: "Erreur lors de la mise à jour du compte", error: err.message });
   }
 });
 
