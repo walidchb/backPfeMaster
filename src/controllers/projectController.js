@@ -48,8 +48,11 @@ const getProjects = async (req, res) => {
 const createProject = async (req, res) => {
   try {
     console.log("req.body = ", req.body);
+    console.log("req.files = ", req.files);
 
     const { organization, boss, teams, ...projectData } = req.body;
+
+    const teamsArray = Array.isArray(teams) ? teams : [teams];
 
     // Find boss (user) by ID
     const Org = await Organization.findOne({ _id: organization });
@@ -66,10 +69,10 @@ const createProject = async (req, res) => {
     }
 
     // Find teams by their IDs
-    const foundTeams = await Team.find({ _id: { $in: teams } });
+    const foundTeams = await Team.find({ _id: { $in: teamsArray } });
 
-    if (foundTeams.length !== teams.length) {
-      const missingTeamIds = teams.filter(
+    if (foundTeams.length !== teamsArray.length) {
+      const missingTeamIds = teamsArray.filter(
         (teamId) => !foundTeams.some((team) => team._id.equals(teamId))
       );
       return res.status(404).json({
@@ -82,6 +85,11 @@ const createProject = async (req, res) => {
     projectData.organization = Org._id;
     projectData.boss = bossUser._id;
     projectData.teams = foundTeams.map((team) => team._id);
+
+    // Ajoutez les informations sur les documents uploadés
+    if (req.files && req.files.length > 0) {
+      projectData.documents = req.files.map(file => file.filename);
+    }
 
     const newProject = new Project(projectData);
 
@@ -100,7 +108,7 @@ const createProject = async (req, res) => {
 
     const savedProject = await newProject.save();
 
-    res.status(201).json(savedProject); // Created
+    res.status(201).json(savedProject);
   } catch (err) {
     console.error(err); // Log the error for debugging
 
@@ -213,30 +221,7 @@ const updateProject = async (req, res) => {
         });
       }
     }
-    /*if (updates.includes("tasks")) {
-      const newTaskIds = req.body.tasks;
-
-      // Validate new team IDs format
-      const invalidTaskIds = newTaskIds.filter(
-        (taskId) => !mongoose.Types.ObjectId.isValid(taskId)
-      );
-      if (invalidTaskIds.length > 0) {
-        return res.status(400).json({ message: "Invalid task IDs", invalidTaskIds });
-      }
-
-      // Check if new teams exist
-      const newTasks = await Task.find({ _id: { $in: newTaskIds } });
-      if (newTasks.length !== newTaskIds.length) {
-        const missingTeamIds = newTaskIds.filter(
-          (taskId) => !newTasks.some((team) => team._id.equals(taskId))
-        );
-        return res.status(404).json({
-          message: "One or more tasks not found",
-          missingTeamIds,
-        });
-      }
-    }*/
-
+    
     updates.forEach((update) => {
       if (arrayUpdates.includes(update)) {
         arrayUpdatesData[update] = req.body[update];
@@ -270,9 +255,30 @@ const updateProject = async (req, res) => {
   }
 };
 
+const deleteDocument = async (req, res) => {
+  const { id } = req.params;
+  const { fileName } = req.body;
+
+  try {
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({ message: 'Projet non trouvé' });
+    }
+
+    // Filtrer le tableau de documents pour supprimer le fichier spécifié
+    project.documents = project.documents.filter(doc => doc !== fileName);
+
+    await project.save();
+    res.json(project);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur du serveur', error });
+  }
+};
+
 module.exports = {
   createProject,
   getProjects,
   deleteProject,
   updateProject,
+  deleteDocument
 };

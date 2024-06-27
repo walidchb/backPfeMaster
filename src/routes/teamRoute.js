@@ -17,7 +17,9 @@ async function fetchTeamsByBoss(projectBossId) {
     }, []);
 
     // Fetch teams using the extracted team IDs
-    const teams = await Team.find({ _id: { $in: teamIds } });
+    const teams = await Team.find({ _id: { $in: teamIds } })
+      .populate("Boss") // Populate boss field with name and email
+      .populate("Organization"); // Populate organization field with name;
 
     return teams;
   } catch (error) {
@@ -35,7 +37,8 @@ router.get("/teamsByBoss", async (req, res) => {
   // console.log(userId.userId);
 
   try {
-    const teams = await fetchTeamsByBoss(projectBossId);
+    const teams = await fetchTeamsByBoss(projectBossId)
+      
     res.status(200).json(teams);
   } catch (error) {
     res.status(500).json({ error: error.message });

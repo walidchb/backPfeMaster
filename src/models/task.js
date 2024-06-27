@@ -57,6 +57,10 @@ const TaskSchema = new mongoose.Schema({
     ref: "Team",
     required: [true, "Team is required"],
   },
+  documents: {
+    type: [String],
+    default: []
+  }
 });
 
 const Task = mongoose.model("Task", TaskSchema);
