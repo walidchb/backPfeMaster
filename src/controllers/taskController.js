@@ -49,6 +49,7 @@ const getTasks = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     console.log("req.body = ", req.body);
+    console.log("req.files = ", req.files);
 
     const { affectedto, projet, team, ...taskData } = req.body;
 
@@ -77,6 +78,11 @@ const createTask = async (req, res) => {
     taskData.affectedto = affectedUser ? affectedUser._id : null;
     taskData.projet = project._id;
     taskData.team = teamObj._id;
+
+    // Ajoutez les informations sur les documents uploadés
+    if (req.files && req.files.length > 0) {
+      taskData.documents = req.files.map(file => file.filename);
+    }
 
     const newTask = new Task(taskData);
 
@@ -237,9 +243,30 @@ const updateTask = async (req, res) => {
   }
 };
 
+const deleteDocument = async (req, res) => {
+  const { id } = req.params;
+  const { fileName } = req.body;
+
+  try {
+    const task = await Task.findById(id);
+    if (!task) {
+      return res.status(404).json({ message: 'task non trouvé' });
+    }
+
+    // Filtrer le tableau de documents pour supprimer le fichier spécifié
+    task.documents = task.documents.filter(doc => doc !== fileName);
+
+    await task.save();
+    res.json(task);
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur du serveur', error });
+  }
+};
+
 module.exports = {
   createTask,
   getTasks,
   deleteTask,
   updateTask,
+  deleteDocument
 };

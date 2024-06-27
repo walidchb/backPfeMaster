@@ -61,6 +61,10 @@ const ProjectSchema = new mongoose.Schema({
       ref: "Task",
     },
   ],
+  documents: {
+    type: [String],
+    default: []
+  }
 });
 // ProjectSchema.plugin(uniqueValidator);
 

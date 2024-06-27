@@ -32,6 +32,7 @@ const userSchema = new mongoose.Schema({
             "teamBoss",
             "prjctBoss",
             "individual",
+            "admin"
           ],
           message:
             "Role must be one of 'employee', 'orgBoss', 'teamBoss', 'prjctBoss', or 'individual'",
@@ -62,6 +63,10 @@ const userSchema = new mongoose.Schema({
     required: [true, "Password is required"],
     minlength: [6, "Password must be at least 6 characters long"],
   },
+  uid : {
+    type: String,
+    default: null
+  }
   
 });
 
