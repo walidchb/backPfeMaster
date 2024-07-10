@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 const port = process.env.PORT || 1937;
 
 const connectionString =
-  "mongodb+srv://walidchebbab2001:Maman123@cluster0.k5q0dbu.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Replace with your connection string
+  "mongodb+srv://gartiabdou074:rzOhzb4FGcScSBNr@pfemaster.nv4nnwo.mongodb.net/?retryWrites=true&w=majority&appName=PFEmaster"; // Replace with your connection string
 
 mongoose
   .connect(connectionString, {
